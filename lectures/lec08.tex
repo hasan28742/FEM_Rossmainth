@@ -1,0 +1,195 @@
+\lecture{The stability constant, and a posteriori error}{Lecture 8 --- Friday, September 11, 2026}{Math 6660 --- \texttt{8th.pdf}}
+
+\begin{roadmap}[Lecture 8]
+\roadq{Why does the $L^{2}$ estimate get an extra power of $h$, and what is the
+difference between the two kinds of error bound?}
+\begin{roadlist}
+\item The duality argument needs a \textbf{stability constant} $C_{S}$: the
+  auxiliary (dual) problem's solution must not blow up. That is what is proved
+  here.
+\item The \textbf{Poincar\'e inequality} is the tool that delivers it --- a
+  function pinned at the boundary cannot be large if its derivative is small.
+\item Result: $\norm{e}\le C\,h^{2}\norm{u''}$.
+\item Then the switch: \textbf{a priori} bounds involve $u$, which you do not
+  have. \textbf{A posteriori} bounds involve $U$, which you just computed.
+\end{roadlist}
+\payoff{Separating ``what rate should this element give'' from ``how wrong is
+\emph{this particular} run''.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Recap}
+
+For $-(au')'=f$ on $(0,1)$, $u(0)=u(1)=0$, with CG(1):
+
+\paragraph{(1) Energy norm.}
+$\norm{u-U}_{E}^{2}=\int_0^1 a\bigl[(u-U)'\bigr]^{2}\dx$, and
+$\norm{u-U}_{E}\le\norm{u-v}_{E}$ for all $v\in\Vh$. Taking $v=\Pi_h u$,
+\begin{equation}\label{eq:l8e}
+  \norm{e}_{E}\le C\,\norm{h\,u''}_{a}.
+\end{equation}
+
+\paragraph{(2) $L^{2}$ norm.}
+$\norm{u-U}^{2}=\int_0^1 (u-U)^{2}\dx$, and the summary bound from last lecture,
+\begin{equation}\label{eq:l8summary}
+  \norm{e}\le C_{I}^{2}\,h_{\max}\,\norm{u''}_{a}\,
+              \frac{\norm{\phi''}_{a}}{\norm{e}},
+\end{equation}
+which still contains the unknown $\phi$ from the \textbf{dual problem}
+\begin{equation}\label{eq:l8dual}
+  -(a\phi')'=e,\qquad \phi(0)=\phi(1)=0 .
+\end{equation}
+
+\begin{intuition}[what this lecture is for]
+\eqref{eq:l8summary} is not yet an error estimate --- the right-hand side still
+mentions $\phi$, which depends on the error you are trying to bound. The whole
+lecture is one job: show that $\norm{\phi''}_a/\norm{e}$ is bounded by a
+constant depending only on $a$, so it can be absorbed and the estimate closed.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Claim (the stability constant)}
+
+\begin{theorem}\label{thm:l8claim}
+For
+\begin{equation}\label{eq:l8psi}
+  -(a\psi')'=\xi,\qquad \psi(0)=\psi(1)=0,
+\end{equation}
+we have
+\begin{equation}\label{eq:l8CS}
+  \max_{\xi\neq0}\frac{\norm{\psi''}_{a}}{\norm{\xi}}\;\le\;C_{S},
+\end{equation}
+where $C_{S}$ depends only on $a$.
+\end{theorem}
+
+\begin{proof}
+Expanding \eqref{eq:l8psi}, $-a\psi''=a'\psi'+\xi$, so
+\begin{equation}\label{eq:l8start}
+  \norm{a\psi''}\le\norm{\xi}+\norm{a'\psi'}
+                 \le\norm{\xi}+\norm{a'}_{\infty}\norm{\psi'},
+  \qquad
+  \norm{a'}_{\infty}=\max_{x\in[0,1]}\abs{a'(x)} .
+\end{equation}
+Take the BVP, multiply by $\psi$ and integrate by parts:
+\begin{equation}\label{eq:l8parts}
+  -\int_0^1\psi\,(a\psi')'\dx=\int_0^1\xi\,\psi\dx
+  \quad\Longrightarrow\quad
+  \int_0^1 a\,(\psi')^{2}\dx=\int_0^1\xi\,\psi\dx ,
+\end{equation}
+and since $a\ge a_{\min}$,
+\begin{equation}\label{eq:l8amin}
+  a_{\min}\int_0^1(\psi')^{2}\dx\le\int_0^1\xi\,\psi\dx
+  \quad\Longrightarrow\quad
+  a_{\min}\norm{\psi'}^{2}\le\norm{\xi}\,\norm{\psi} .
+\end{equation}
+\end{proof}
+
+% ------------------------------------------------------------------
+\subsection*{Aside: Poincar\'e inequality}
+
+Let $v\in\Vsp$. Then
+\begin{equation}\label{eq:l8poin}
+  v(x)=\int_0^{x} v'(y)\,\mathrm{d}y,
+  \qquad
+  \abs{v}\le\int_0^1\abs{v'}\,\mathrm{d}y
+          \le\sqrt{\int_0^1 (v')^{2}\,\mathrm{d}y},
+\end{equation}
+so $\int_0^1 v^{2}\dx\le\int_0^1(v')^{2}\,\mathrm{d}y$, i.e.
+\begin{equation}\label{eq:l8poin2}
+  \norm{v}\le\norm{v'} .
+\end{equation}
+
+\begin{mechanics}[Poincar\'e is ``pinned ends cannot move for free'']
+$v(0)=0$ and $v$ is built up by integrating its own slope, so a function that is
+small in slope cannot be large in value --- it has nowhere to start from. In
+mechanics: constrain a bar at one end, and its displacement is controlled by its
+strain. Remove the constraint and \eqref{eq:l8poin2} fails immediately: a rigid
+translation has $v'\equiv0$ but $\norm{v}\neq0$.
+\end{mechanics}
+
+% ------------------------------------------------------------------
+\subsection*{Back to the proof}
+
+From \eqref{eq:l8amin} and Poincar\'e \eqref{eq:l8poin2},
+\begin{equation}\label{eq:l8back}
+  a_{\min}\norm{\psi'}^{2}\le\norm{\xi}\,\norm{\psi}\le\norm{\xi}\,\norm{\psi'}
+  \qquad\Longrightarrow\qquad
+  \norm{\psi'}\le\frac{\norm{\xi}}{a_{\min}} .
+\end{equation}
+Substituting into \eqref{eq:l8start},
+\begin{align}
+  \norm{a\psi''} &\le \norm{\xi}+\norm{a'}_{\infty}\frac{\norm{\xi}}{a_{\min}}
+   \notag\\
+                 &\le \left(1+\frac{\norm{a'}_{\infty}}{a_{\min}}\right)\norm{\xi}.
+   \label{eq:l8apsi}
+\end{align}
+But $\sqrt{a_{\min}}\,\norm{\psi''}_{a}\le\norm{a\psi''}$, since
+\begin{equation}\label{eq:l8two}
+  \norm{\psi''}_{a}=\sqrt{\int_0^1 a\,(\psi'')^{2}\dx}
+  \qquad\text{while}\qquad
+  \norm{a\psi''}=\sqrt{\int_0^1 a^{2}(\psi'')^{2}\dx}.
+\end{equation}
+Therefore
+\begin{equation}\label{eq:l8CSdef}
+  \norm{\psi''}_{a}\le
+   \underbrace{\frac{1+\dfrac{\norm{a'}_{\infty}}{a_{\min}}}{\sqrt{a_{\min}}}}_{C_{S}}
+   \,\norm{\xi},
+  \qquad\text{so}\qquad
+  \frac{\norm{\psi''}_{a}}{\norm{\xi}}\le C_{S}.
+\end{equation}
+
+\begin{intuition}[$C_S$ is a conditioning number]
+$C_S$ grows when $a_{\min}$ is small (a nearly-zero-stiffness region) or when
+$\norm{a'}_\infty$ is large (a sharply varying material). Both are the cases an
+engineer already treats as ill-conditioned --- and the estimate degrades exactly
+there, not by coincidence.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Conclusion of the $L^{2}$ estimate}
+
+Feeding \eqref{eq:l8CSdef} into \eqref{eq:l8summary},
+\begin{equation}\label{eq:l8final}
+  \boxed{\;\norm{e}\le \underbrace{C_{I}^{2}C_{S}}_{\text{constant}}
+                       \norm{h^{2}u''}_{a}\;}
+  \qquad\text{or}\qquad
+  \norm{e}\le C_{I}^{2}\,C_{S}\,h_{\max}^{2}\,\norm{u''}_{a}.
+\end{equation}
+Assuming $\norm{u''}_{a}$ is bounded, then $\norm{e}=O(h^{2})$.
+
+\begin{dictionary}[the two a priori rates]
+$\norm{e}_{E}=O(h)$ & strain/stress error: first order \\
+$\norm{e}=O(h^{2})$ & displacement error: second order \\
+the extra power & interpolation used twice --- on $e$ and on $\phi$ \\
+\end{dictionary}
+
+% ==================================================================
+\subsection*{A posteriori error}
+
+\paragraph{(1) Energy norm.}
+\begin{align}
+  \norm{e}_{E}^{2}
+    &= \norm{e'}_{a}^{2} = \int_0^1 a\,(e')^{2}\dx \notag\\
+    &= \int_0^1 a\,u'e'\dx-\int_0^1 a\,U'e'\dx \notag\\
+    &= \int_0^1 f\,e\dx-\int_0^1 a\,U'e'\dx .
+  \label{eq:l8post}
+\end{align}
+Subtract from this the discrete equation, which vanishes for any $v\in\Vh$:
+\begin{equation}\label{eq:l8sub}
+  \int_0^1 f\,v\dx-\int_0^1 a\,U'v'\dx=0,
+  \qquad\text{with } v=\Pi_h e\in\Vh ,
+\end{equation}
+giving
+\begin{equation}\label{eq:l8postfinal}
+  \norm{e}_{E}^{2}
+   =\int_0^1 f\,\bigl(e-\Pi_h e\bigr)\dx
+   -\int_0^1 a\,U'\bigl(e-\Pi_h e\bigr)'\dx .
+\end{equation}
+
+\begin{intuition}[why this one is computable]
+Everything on the right of \eqref{eq:l8postfinal} involves $f$ and $U$ --- data
+and the computed solution. The exact $u$ has disappeared. That is the whole
+point of an \emph{a posteriori} bound: it can be evaluated after the solve, on
+the mesh you actually used, which is what makes adaptive refinement possible.
+Lecture 9 turns it into a per-element number.
+\end{intuition}

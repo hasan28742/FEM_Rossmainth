@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdftotext -layout hw2_solutions.pdf /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/sol.txt)",
+      "Bash(pdftotext -layout hw2.pdf -)",
+      "Bash(pdftotext -layout hw2_statement.pdf /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/stmt.txt)",
+      "Bash(pdftotext -layout hw2.pdf /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/hw2.txt)",
+      "Bash(cp hw2_p5_table.tex /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/orig_p5_table.tex)",
+      "Bash(timeout 900 python3 hw2_p5_cg1.py)",
+      "Bash(mkdir -p /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/run)",
+      "Bash(cp /home/hasan/Documents/FEM_Fall2027/homework/HW2/hw2_p5_cg1.py /home/hasan/Documents/FEM_Fall2027/homework/HW2/hw2_p67_cg2.py .)",
+      "Bash(python3 hw2_p5_cg1.py)",
+      "Bash(mkdir -p /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/build)",
+      "Bash(rm -rf *)",
+      "Bash(cp /home/hasan/Documents/FEM_Fall2027/homework/HW2/*.tex /home/hasan/Documents/FEM_Fall2027/homework/HW2/*.pdf /home/hasan/Documents/FEM_Fall2027/homework/HW2/*.png .)",
+      "Bash(rm -f hw2_solutions.pdf hw2_statement.pdf)",
+      "Bash(python3 hw2_p67_cg2.py)",
+      "Bash(tee p67.out)",
+      "Bash(grep -v '^$')",
+      "Bash(pdftoppm -r 150 -png hw2.pdf /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/orig)",
+      "Bash(pdftoppm -r 150 -png hw2_statement.pdf /tmp/claude-1000/-home-hasan-Documents-FEM-Fall2027/7016c99a-de4a-4f6d-9828-ea9c73aae6d8/scratchpad/retype)",
+      "Bash(awk 'NR>=1' hw2_solutions.tex)"
+    ],
+    "additionalDirectories": [
+      "/home/hasan/Documents/FEM_Fall2027/homework/HW2"
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+% ============================================================
+%  hw2_statement.tex
+%  Exact re-typesetting of hw2.pdf (MATH 6660, Homework 2, Fall 2026).
+%  Statement only -- nothing added, nothing removed, nothing corrected.
+%  Build:  pdflatex hw2_statement.tex
+% ============================================================
+%
+%  Geometry measured from hw2.pdf:
+%    paper 612 x 792 (letter)
+%    text block x: 40.8 .. 551.0 pt      (width 510.2 pt)
+%    header ink top y = 36.2 ; head rule y = 61.4 (full text width)
+%    title ink top y = 81.7 ; folio ink top y = 723.0
+%    section heading: SFBX1440 (14.4pt bold), ink top y = 129.1 (p.1) / 78.0 (p.2),
+%      underlined by a 0.4pt rule as wide as the heading text
+%      (p.1 rule: y = 144.5, x 40.8 -> 316.8, length 276.0 pt)
+%    enumerate: label "1." at x = 54.0, item text at x = 67.9
+%
+\documentclass[11pt]{article}
+
+\usepackage[letterpaper,left=40.9pt,right=61pt,top=77.2pt,bottom=90pt,
+            headheight=30pt,headsep=15.6pt,footskip=28.3pt]{geometry}
+\usepackage[T1]{fontenc}   % source embeds cm-super SFRM/SFBX (= T1/EC metrics)
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}     % defaults: boxed links, magenta url border
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textbf{Assigned:} Friday Sept. 11, 2026\\
+              \textbf{Due:} Friday Sept. 25, 2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\setlength{\parindent}{0pt}
+
+% label "1." at x=54.0 (13.2pt in), item text at x=67.9 (27.1pt in)
+\setlist[enumerate,1]{leftmargin=27.1pt,labelsep=5.5pt,
+                      topsep=9.1pt,itemsep=15pt,parsep=0pt}
+
+% Section heading: bold, followed by a rule exactly as wide as the heading.
+% source heading: SFBX1440 = bold extended at 14.4pt = \Large
+\newcommand{\hwsecfont}{\Large\bfseries}
+\newsavebox{\hwsecbox}
+\newcommand{\hwsection}[1]{%
+  \par\addvspace{\hwsecA}%
+  \sbox{\hwsecbox}{\hwsecfont #1}%
+  \noindent\usebox{\hwsecbox}\par\nobreak
+  \nointerlineskip\vspace{\hwsecB}%
+  \noindent\rule{\wd\hwsecbox}{0.4pt}\par\nobreak
+  \nointerlineskip\vspace{\hwsecC}%
+}
+\newcommand{\hwsecA}{24.3pt}
+\newcommand{\hwsecB}{1.6pt}
+\newcommand{\hwsecC}{13.6pt}
+
+\begin{document}
+
+\begin{center}
+  {\large\textsc{MATH 6660: Homework 2}}\\
+  {\large\textsc{Fall 2026}}
+\end{center}
+
+% ================================================================
+\hwsection{CG(1) for 2-pt BVP with periodic BCs:}
+
+Consider the following boundary value problem with periodic boundary conditions:
+\begin{align*}
+  \textbf{ODE} &: \quad -\, u'' + q(x)\,u = f(x),\\
+  \textbf{BC1} &: \quad u(-\pi) = u(\pi),\\
+  \textbf{BC2} &: \quad u'(-\pi) = u'(\pi),
+\end{align*}
+where $q>0$ $\forall x\in[-\pi,\pi]$.
+
+\begin{enumerate}
+
+\item Derive a Galerkin orthogonality expression for this problem and deduce
+from this an appropriate \emph{energy norm}.
+
+\item Develop a CG(1) method for this problem, clearly stating the appropriate
+spaces, trial, test, and basis functions.
+
+\item Show that the CG(1) FEM solution gives the optimal solution in the
+\emph{energy norm}. Use this to prove an \emph{a priori} error estimate in the
+\emph{energy norm}.
+
+\item Prove an \emph{a priori} error estimate in the $L^{2}$-norm.
+
+\item Numerically implement the CG(1) method on a uniform mesh with the
+following functions
+\[
+  q(x) = 3-\sin(x)-\sin(2x)-\cos(x), \quad
+  f(x) = 2e^{\sin(x)}e^{\cos(x)}, \quad
+  u(x) = e^{\sin(x)}e^{\cos(x)}.
+\]
+Numerically determine the convergence rate in both the \emph{energy norm} and
+the $L^{2}$-norm by creating an appropriate convergence table with
+\[
+  M = 24, 49, 99, 199, 399, 799.
+\]
+
+\vspace{4.4pt}%
+\textbf{HINT:} You can assume a uniform grid spacing $h = 2\pi/\left(M+1\right)$.
+For a given $M$, you will need to write Python code that assembles the stiffness
+matrix, $\underline{\underline{A}}$, and the right-hand side vector,
+$\underline{b}$. I recommend that you store $\underline{\underline{A}}$ as a
+sparse array using \texttt{scipy.sparse} and that you solve the resulting linear
+system using the built-in conjugate gradient solver \texttt{cg} from
+\texttt{scipy.sparse.linalg}. You can find documentation for how to use these
+functions here: \url{https://docs.scipy.org/doc/scipy/}.
+
+\end{enumerate}
+
+\newpage
+% ================================================================
+\hwsection{CG(2) for 2-pt BVP with Dirichlet BCs:}
+
+Consider the following boundary value problem with periodic boundary conditions:
+\begin{align*}
+  \textbf{ODE} &: \quad -\, u'' = f(x),\\
+  \textbf{BC} &: \quad u(0) = u(1) = 0.
+\end{align*}
+
+\begin{enumerate}[resume,topsep=20.3pt]
+
+\item Implement the CG(2) (i.e., piecewise quadratic polynomials) method as
+discussed in class for this problem.
+
+\vspace{4.4pt}%
+\textbf{HINT:} You can assume a uniform grid spacing $h = 1/\left(M+1\right)$.
+For a given $M$, you will need to write Python code that assembles the stiffness
+matrix, $\underline{\underline{A}}$, and the right-hand side vector,
+$\underline{b}$. I recommend that you store $\underline{\underline{A}}$ as a
+sparse array using \texttt{scipy.sparse} and that you solve the resulting linear
+system using the built-in conjugate gradient solver \texttt{cg} from
+\texttt{scipy.sparse.linalg}. You can find documentation for how to use these
+functions here: \url{https://docs.scipy.org/doc/scipy/}.
+
+\item Apply your method to the following example:
+\[
+  u(x) = e^{1-\cos(2\pi x)-\sin(2\pi x)}-1, \quad
+  f(x) = 4\pi^{2}e^{1-\cos(2\pi x)-\sin(2\pi x)}
+         \Bigl[\sin\left(4\pi x\right)-\cos\left(2\pi x\right)
+               -\sin\left(2\pi x\right)-1\Bigr].
+\]
+Numerically determine the convergence rate in both the \emph{energy norm} and
+the $L^{2}$-norm by creating an appropriate convergence table with
+\[
+  M = 24, 49, 99, 199, 399, 799.
+\]
+
+\end{enumerate}
+
+\end{document}

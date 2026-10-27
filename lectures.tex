@@ -1,0 +1,69 @@
+% ============================================================
+%  lectures.tex  --  the transcription ALONE.
+%
+%  Same lecture sources as main.tex, but every added commentary
+%  box is suppressed, so nothing here is mine except the typesetting.
+%  Build:  ./build.sh lectures
+% ============================================================
+\documentclass[11pt]{report}
+
+\input{preamble}
+\input{macros}
+
+\transcripttrue        % <- suppress the annotation boxes
+
+% ---- discard the added commentary ------------------------------------
+\RenewEnviron{roadmap}[1][]{}
+\RenewEnviron{intuition}[1][]{}
+\RenewEnviron{mechanics}[1][]{}
+\RenewEnviron{pitfall}[1][]{}
+\RenewEnviron{dictionary}[1][]{}
+
+% `recall' also carries material stated in lecture (the delta properties, and
+% the equation labels the main text refers to), so it is kept -- but rendered
+% as plain text, without the box.
+\RenewEnviron{recall}[1][]{%
+  \par\medskip\noindent
+  \ifstrempty{#1}{\textbf{Recall.}}{\textbf{Recall (#1).}}\ \BODY
+  \par\medskip}
+
+% no office-hours queries in the clean transcript
+\renewcommand{\todoq}[1]{}
+
+% plain running head
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\nouppercase{\leftmark}}
+\fancyhead[R]{\small\sffamily\thepage}
+
+\title{\bfseries Finite Element Methods\\[0.3em]
+       \large MATH 6660 --- Fall 2026\\[0.2em]
+       \normalsize Prof.\ James Rossmanith\\[0.6em]
+       \normalsize\normalfont\itshape lecture transcription}
+\author{Hasan}
+\date{\today}
+
+\begin{document}
+
+\pagenumbering{roman}
+\maketitle
+\thispagestyle{empty}
+\tableofcontents
+
+\cleardoublepage
+\pagenumbering{arabic}
+
+\chapter{Lectures}
+
+\input{lectures/lec01}
+\input{lectures/lec02}
+\input{lectures/lec03}
+\input{lectures/lec04}
+\input{lectures/lec05}
+\input{lectures/lec06}
+\input{lectures/lec07}
+\input{lectures/lec08}
+\input{lectures/lec09}
+\input{lectures/lec10}
+\input{lectures/lec12}
+
+\end{document}

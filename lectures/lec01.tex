@@ -1,0 +1,681 @@
+\lecture{Why FEM, and the two-point BVP}{Lecture 1 --- Monday, August 24, 2026}{Math 6660}
+
+\begin{roadmap}[Lecture 1]
+\roadq{Why does FEM not just solve the differential equation?}
+\begin{roadlist}
+\item The model problem for the whole course is $-(au')'=f$. Read it as an
+  \textbf{axial bar}: $a=EA$ is the stiffness, $f$ the distributed load, $u$ the
+  displacement. Everything later is this equation or a relative of it.
+\item FEM never attacks the \emph{strong} form (the ODE holding at every point).
+  It rewrites the problem as one \emph{integral} identity, tested against
+  arbitrary virtual displacements. That is the weak form.
+\item The operator turns out to be \textbf{self-adjoint} --- which is
+  Betti--Maxwell reciprocity wearing a different hat.
+\item The space $\Vsp$ of admissible displacements is defined by
+  \textbf{finite strain energy}, not by smoothness. That choice is what lets
+  kinked, piecewise-linear elements be legal functions.
+\end{roadlist}
+\payoff{Knowing why every element derivation you have ever seen starts from
+virtual work rather than from the governing PDE.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Context}
+
+Where this course sits relative to the rest of the numerical sequence:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Prerequisites} & \textbf{The discretisation courses}\\
+\midrule
+5610: interpolation, integration, ODEs & \textbf{6660}: FEMs \quad(this course)\\
+5620: numerical linear algebra          & 6670: FVMs\\
+                                        & 5170: FDMs\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ==================================================================
+\subsection*{Why FEM?}
+
+\paragraph{(1) Theoretical.}
+The original problem is continuous.
+\begin{itemize}[leftmargin=1.6em,itemsep=1pt]
+  \item \textbf{FDM}: approximate the solution at a discrete number of points.
+  \item \textbf{FEM}: keep the original continuous problem (the PDE), but
+        replace (approximate) the \emph{function spaces}.
+\end{itemize}
+All the theory of PDEs carries over to FEM.
+
+\begin{intuition}[FDM discretises the equation; FEM discretises the space]
+This is the single most important sentence of the lecture, and it is the
+reason the rest of the course looks like functional analysis rather than
+calculus.
+
+FDM replaces $\dd/\dx$ by a difference quotient --- it attacks the
+\emph{operator}, and what survives is a list of nodal values with no meaning in
+between. FEM leaves the equation alone and instead shrinks the \emph{set of
+candidate shapes} from ``all displacement fields with finite energy'' to ``all
+piecewise polynomials on this mesh.'' The answer is still a function defined
+everywhere; you can differentiate it, integrate it, and ask for its value
+between nodes.
+
+That is why an FE result gives you a stress field over the whole part while a
+finite-difference result gives you numbers at grid points, and it is why FEM
+inherits the PDE's theory: the problem was never changed, only the space it is
+posed over.
+\end{intuition}
+
+\paragraph{(2) Practical reasons.}
+\begin{itemize}[leftmargin=1.6em,itemsep=1pt]
+  \item Can be formulated on an unstructured grid.
+  \item Lots of flexibility in the choice of function spaces.
+\end{itemize}
+
+\begin{mechanics}
+Both bullets are why FEM won in engineering practice and FDM did not. An
+unstructured grid is what lets you mesh a bracket with a fillet and three bolt
+holes; a structured finite-difference grid cannot follow that boundary.
+``Flexibility in the choice of function spaces'' is element selection --- linear
+vs.\ quadratic, Lagrange vs.\ Hermite, beam vs.\ shell vs.\ solid. Choosing an
+element type \emph{is} choosing $\Vh$.
+\end{mechanics}
+
+\paragraph{(3) Note.}
+Much of the theory of FEMs is based on \emph{elliptic} PDE theory. Parabolic
+PDEs are OK. Hyperbolic PDEs are more challenging.
+
+\begin{intuition}[why elliptic problems are the friendly case]
+Elliptic $=$ steady-state and diffusive: static stress analysis, steady heat
+conduction, incompressible potential flow. Information propagates
+instantaneously in all directions, the solution is as smooth as the data
+allows, and --- the part that matters for this course --- the problem has an
+associated \emph{energy} that the solution minimises. That energy is what
+becomes the bilinear form $a(u,v)$, and its positivity is what makes every
+existence proof work.
+
+Hyperbolic $=$ wave-like: information travels along characteristics at finite
+speed, discontinuities (shocks, wavefronts) propagate rather than smooth out,
+and there is no energy functional to minimise. Standard Galerkin FEM has no
+mechanism to respect a direction of propagation, which is why it produces
+spurious oscillations on advection-dominated problems and why that case needs
+separate machinery (SUPG, discontinuous Galerkin). If you have run an explicit
+crash or blast simulation and wondered why it uses such different technology
+from a static solve, this is why.
+\end{intuition}
+
+% ==================================================================
+\subsection*{The two-point BVP}
+
+The 1D version of Poisson's equation. On the fixed domain $0<x<1$:
+\begin{equation}\label{eq:bvp}
+  -\bigl(a(x)\,u'\bigr)' = f(x),
+  \qquad u(0)=u(1)=0 .
+\end{equation}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.0]
+  % ---- the bar, loaded AXIALLY ----
+  \draw[thick,fill=IntBack] (0,-0.22) rectangle (6,0.22);
+  % supports (hatched walls)
+  \draw[thick] (0,-0.6) -- (0,0.6);
+  \foreach \y in {-0.55,-0.35,...,0.45} \draw (0,\y) -- (-0.22,\y+0.13);
+  \draw[thick] (6,-0.6) -- (6,0.6);
+  \foreach \y in {-0.55,-0.35,...,0.45} \draw (6,\y) -- (6.22,\y+0.13);
+  % axial distributed load: arrows ALONG the bar
+  \foreach \x in {0.7,1.5,...,5.1}
+    \draw[-{Latex[length=2mm]},MEFrame,thick] (\x,0) -- (\x+0.55,0);
+  \node[MEFrame] at (3.0,0.62) {$f(x)$ \ \small(axial)};
+  \node at (0,-0.85) {\scriptsize$0$};
+  \node at (6,-0.85) {\scriptsize$1$};
+  % ---- u(x) plotted below, NOT as a sag ----
+  \begin{scope}[shift={(0,-2.6)}]
+    \draw[->,gray!70] (-0.2,0) -- (6.6,0) node[right,font=\small,black] {$x$};
+    \draw[->,gray!70] (0,-0.15) -- (0,1.25);
+    \node[right,font=\small] at (0.12,1.05) {$u(x)$};
+    \draw[very thick,IntFrame] (0,0) .. controls (2,0.95) and (4,0.95) .. (6,0);
+    \foreach \x/\l in {0/0, 6/1}{\draw (\x,-0.1)--(\x,0.1); \node[below,font=\scriptsize] at (\x,-0.12) {$\l$};}
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\begin{pitfall}[do not draw this as a sagging beam]
+The obvious picture --- downward arrows and a drooping curve --- is
+\textbf{wrong}, and the lecturer flags it directly: \emph{``misleading figure;
+try to think of it as a heat transfer problem rather than a structural
+mechanics problem.''}
+
+Here $u$ is \emph{axial} displacement and $f$ is an \emph{axial} load, so the
+load arrows point along the bar, and the curve below is a \emph{plot of $u$
+against $x$}, not the shape the bar takes. A sagging picture silently imports
+bending, which is a fourth-order problem with a different energy
+($\int EI(w'')^{2}$) and different elements --- see the $H^{1}$ vs $H^{2}$
+discussion later in this lecture.
+
+The safest reading of \eqref{eq:bvp} is steady heat conduction: $u$
+temperature, $a$ conductivity, $f$ a heat source. Nothing there tempts you into
+bending. Use the bar for the \emph{algebra} ($au'=N$, $\int a(u')^{2}=$ strain
+energy); use heat conduction for the \emph{picture}.
+\end{pitfall}
+
+\noindent
+\begin{tabular}{@{}r@{\;}c@{\;}l@{\qquad}l@{}}
+$u$ & $\defeq$ & ``displacement''          & \\
+$f$ & $\defeq$ & ``external load''         & given\\
+$a$ & $=$      & ``modulus of elasticity'' & given\\
+\end{tabular}
+
+\medskip
+\noindent\textbf{Assume:}
+\begin{equation}\label{eq:abounds}
+  0 < a_{1} \le a(x) \le a_{2} < \infty
+  \qquad \forall\, x\in[0,1].
+\end{equation}
+
+\begin{mechanics}[the model problem is an axially loaded bar]
+The lecturer's own naming makes this explicit, so take it literally. Let
+$a(x)=E(x)A(x)$. Then $a u'$ is the internal axial force $N(x) = EA\,\eps$, and
+\eqref{eq:bvp} reads
+\[
+  -\frac{\dd N}{\dx} = f
+  \qquad\text{i.e.}\qquad
+  \frac{\dd N}{\dx} + f = 0,
+\]
+which is nothing but axial equilibrium of a differential slice of bar. The
+boundary condition $u(0)=u(1)=0$ pins both ends.
+
+So \eqref{eq:bvp} is: \emph{a bar, fixed at both ends, under distributed axial
+load $f$, made of a material whose stiffness $a$ may vary along its length.}
+Every abstract statement in the next four lectures can be checked against this
+picture.
+
+Read \eqref{eq:abounds} the same way: $a_1>0$ says the bar is nowhere made of
+nothing (no zero-stiffness segment, or it would separate freely), and
+$a_2<\infty$ says it is nowhere rigid. These two constants will reappear later
+as the coercivity and continuity constants, and their ratio $a_2/a_1$ is the
+material contrast that controls how bad the error bound gets.
+\end{mechanics}
+
+\todoq{Page 3 of my notes writes the boundary condition as $u(0)=u(1)=1$ at the
+top, but every subsequent line --- and all of Lecture 2 --- uses
+$u(0)=u(1)=0$. I have transcribed it as $0$. Confirm it was a slip.}
+
+% ==================================================================
+\subsection*{The operator is self-adjoint}
+
+Note that
+\begin{equation}\label{eq:Ldef}
+  \mathcal{L}(u) = -(a u')'
+  \qquad\text{with}\qquad u(0)=u(1)=0
+\end{equation}
+is a linear differential operator, and $\mathcal{L}$ is \emph{self-adjoint}.
+
+To see it, integrate by parts twice:
+\begin{align}
+  \int_{0}^{1} v\,\mathcal{L}(u)\dx
+    &= -\int_{0}^{1} v\,(au')'\dx \notag\\[2pt]
+    &= \int_{0}^{1} v'\,a\,u'\dx - \Bigl[v\,a\,u'\Bigr]_{x=0}^{x=1}.
+    \label{eq:sa1}
+\end{align}
+Assume $u(0)=u(1)=0$ and $v(0)=v(1)=0$; the boundary term drops:
+\begin{align}
+  &= \int_{0}^{1} v'\,a\,u'\dx \notag\\[2pt]
+  &= -\int_{0}^{1} u\,(a v')'\dx + \Bigl[u\,a\,v'\Bigr]_{x=0}^{x=1} \notag\\[2pt]
+  &= -\int_{0}^{1} u\,(a v')'\dx
+   = \int_{0}^{1} u\,\mathcal{L}(v)\dx .
+\end{align}
+
+\begin{equation}\label{eq:selfadjoint}
+  \boxed{\;\int_{0}^{1} v\,\mathcal{L}(u)\dx = \int_{0}^{1} u\,\mathcal{L}(v)\dx\;}
+  \qquad v = \text{test function}
+\end{equation}
+This is what it means to be self-adjoint.
+
+\todoq{My notes write line \eqref{eq:sa1} as
+$\int v\,\mathcal{L}(u) = \int v\,(au')'$, without the minus sign, even though
+$\mathcal{L}(u)=-(au')'$ two lines above. The very next line \emph{does} carry
+the sign correctly, so it is a copying slip and I have restored the minus here.}
+
+\begin{intuition}[self-adjointness is Betti's reciprocal theorem]
+Equation~\eqref{eq:selfadjoint} is not a piece of abstract bookkeeping --- it is
+a theorem you were taught in structures, under a different name.
+
+Read $\mathcal{L}(u)$ as ``the load distribution that produces displacement
+field $u$.'' Then the left side is \emph{the work done by load system $u$ moving
+through the displacements of system $v$}, and the right side is the work done by
+load system $v$ moving through the displacements of $u$. Equation
+\eqref{eq:selfadjoint} says these are equal.
+
+That is \textbf{Betti--Maxwell reciprocity}: push at $A$ and measure the
+deflection at $B$; you get the same number as pushing at $B$ and measuring at
+$A$. It is also exactly why the flexibility and stiffness matrices are
+symmetric.
+\end{intuition}
+
+\medskip
+\noindent
+\textbf{Note.} A self-adjoint differential operator $\mathcal{L}$ is analogous
+to a symmetric matrix.
+
+\begin{dictionary}
+$\mathcal{L}$ self-adjoint & $\Kmat = \Kmat^{T}$ \\
+$\int v\,\mathcal{L}(u) = \int u\,\mathcal{L}(v)$ & $\bm{v}^{T}\Kmat\bm{u} = \bm{u}^{T}\Kmat\bm{v}$ \\
+the boundary term $[v\,a\,u']_{0}^{1}$ & end reactions doing work; killed by the pinned BCs \\
+$a\,u'$ & internal axial force $N = EA\,\eps$ \\
+\end{dictionary}
+
+\begin{pitfall}[the boundary term is where BCs actually enter]
+Watch what happened in \eqref{eq:sa1}: the essential boundary condition was not
+imposed on the equation, it was used to \emph{delete the boundary term}. This
+is the mechanism for the whole subject.
+
+Kill the term by forcing $v=0$ at the end $\Rightarrow$ that end carries an
+\emph{essential} (Dirichlet, prescribed-displacement) condition, and it must be
+built into the space. Kill it instead by prescribing $a u' = $ given
+$\Rightarrow$ that end carries a \emph{natural} (Neumann, prescribed-traction)
+condition, and it appears in the load vector for free, with nothing imposed on
+the space.
+
+That is the real content of ``essential vs.\ natural,'' and it is why in a
+commercial FE code you constrain displacement DOFs explicitly but simply
+\emph{apply} a traction and let the formulation absorb it.
+\end{pitfall}
+
+% ==================================================================
+\subsection*{Invertibility and regularity}
+
+\noindent\textbf{Note.} Consider
+\[
+  \mathcal{L}(w)=0,\qquad w(0)=w(1)=0 .
+\]
+The only solution that satisfies $\mathcal{L}$ and the BCs is $w=0$. Therefore
+$\mathcal{L}$ is ``invertible'': for given $a$ and $f$ there exists a unique
+$u$.
+
+\begin{intuition}[trivial null space $=$ no rigid-body modes]
+$\mathcal{L}(w)=0$ with $w=0$ at both ends asks: \emph{is there a nonzero
+displacement field that requires no load?} For a bar pinned at both ends,
+obviously not --- any nonzero shape stretches some fibre, which needs force.
+Release one end and the answer changes: $w = \text{const}$ becomes a free
+translation, the null space is nontrivial, and the problem has no unique
+solution.
+
+In matrix terms: $\Kmat\bm{w}=\bm{0}\Rightarrow\bm{w}=\bm{0}$ means
+$\Kmat$ is nonsingular. It is the same check as ``did I constrain enough DOFs
+to remove all rigid body motion,'' which is the first thing a solver complains
+about when it reports a singular stiffness matrix.
+\end{intuition}
+
+\todoq{My notes read ``there exist a unique $u$ and $f$'' --- but $f$ is given
+data, not something solved for. I have written ``for given $a$ and $f$ there
+exists a unique $u$.'' Check the phrasing.}
+
+\medskip
+\noindent\textbf{Note (regularity).} If $0<a<\infty$ and $f$ are sufficiently
+smooth --- specifically, if
+\[
+  a \in \Ck[(0,1)]{1}\quad\text{and}\quad f\in\Ck[(0,1)]{0},
+\]
+then $u\in\Ck[(0,1)]{2}$.
+
+\begin{intuition}[the solution is two derivatives smoother than the load]
+$\mathcal{L}$ takes two derivatives, so solving with $\mathcal{L}^{-1}$ gives
+two back. This is the \emph{elliptic regularity} pattern, and it is why the
+elliptic case is the friendly one.
+
+It also tells you where it breaks: the hypothesis needs $a\in C^{1}$, and a bar
+made of two glued materials has $a$ \emph{jumping} at the interface. Then
+$u\notin C^{2}$, the strong form \eqref{eq:bvp} is not satisfied in the
+classical sense, and there is no classical solution at all --- even though the
+bar plainly has a displacement field. Resolving that is precisely what the
+variational formulation is for, and Lecture 2 closes the loop on it.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Variational formulation}
+
+Multiply our BVP by a \underline{test function} and integrate over the domain
+$[0,1]$:
+\begin{equation}\label{eq:mult}
+  -\int_{0}^{1}(au')'\,v\dx = \int_{0}^{1} \underbrace{f}_{\text{force}} v\dx .
+\end{equation}
+Then integrate by parts:
+\begin{equation}\label{eq:ibp1d}
+  \int_{0}^{1} a\,u'v'\dx - \Bigl[a\,u'v\Bigr]_{0}^{1} = \int_{0}^{1} f v\dx .
+\end{equation}
+Assume $v$ satisfies the BCs:
+\[
+  v(0)=v(1)=0 .
+\]
+In particular, define the solution space
+\begin{equation}\label{eq:Vdef}
+  V = \left\{\, v \;:\;
+    \int_{0}^{1} v^{2}\dx < \infty,\quad
+    \int_{0}^{1} \bigl[v'\bigr]^{2}\dx < \infty,\quad
+    v(0)=v(1)=0 \,\right\}.
+\end{equation}
+
+\begin{intuition}[$V$ is ``every shape the bar could actually take'']
+Read the three conditions in \eqref{eq:Vdef} physically, in order:
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+  \item $\int v^{2}<\infty$ --- the displacement is finite in the mean. The bar
+        does not fly off to infinity.
+  \item $\int (v')^{2}<\infty$ --- \textbf{finite strain energy.} Since
+        $v'=\eps$, this integral is (up to the factor $a/2$) the stored elastic
+        energy. This is the condition that does all the work.
+  \item $v(0)=v(1)=0$ --- kinematically admissible: the shape respects the
+        supports.
+\end{itemize}
+So $V$ is the set of \emph{kinematically admissible displacement fields with
+finite strain energy}. Nothing more exotic than that. This space is called
+$H^{1}_{0}(0,1)$ once the course introduces Sobolev notation; when you meet that
+symbol, substitute this sentence.
+
+\medskip
+\noindent\textbf{What each rung of the derivative ladder is.}
+Every condition defining $V$ is a statement about one of these, and nothing in
+the list goes past the first derivative:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Object} & \textbf{Mechanics} & \textbf{Units} & \textbf{Where it appears}\\
+\midrule
+$v$          & displacement            & m       & $\int v^{2}<\infty$; the BCs $v(0)=v(1)=0$\\
+$v'$         & strain $\eps$           & ---     & $\int (v')^{2}<\infty$: the energy condition\\
+$a v'$       & stress $\sigma$ (times area) & Pa & the flux; continuous across a material joint\\
+$(a v')'$    & net force per length    & N/m     & \emph{only} in the strong form $-(av')'=f$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Because $0<a_{1}\le a\le a_{2}<\infty$, the middle two rows say the same thing:
+$a_{1}^{2}\int(v')^{2}\le\int\sigma^{2}\le a_{2}^{2}\int(v')^{2}$, so ``finite
+strain energy'', ``$v'$ square integrable'' and ``$\sigma$ square integrable''
+are interchangeable. That two-sided bound on $a$ is exactly what keeps them
+from coming apart.
+
+\medskip
+\noindent\textbf{Why $v''$ is not required.}
+Two independent reasons, and it is worth holding both:
+\begin{enumerate}[label=(\roman*),leftmargin=1.8em,itemsep=2pt]
+  \item \textbf{The energy never contains it.} Strain energy is
+        $\tfrac12\int a(v')^{2}$ --- first derivative only. A condition on
+        $v''$ would be restricting something the physics does not charge for.
+  \item \textbf{Integration by parts removed it.} The strong form demands
+        $u''$; \eqref{eq:ibp1d} moved one derivative onto $v$, leaving $u'$ and
+        $v'$. After that step $v''$ has left the problem entirely, and $u'$,
+        $v'$ appear \emph{only inside integrals} --- never evaluated at a point.
+\end{enumerate}
+
+\noindent
+Hence what $V$ does \emph{not} require: $v''$ need not exist, and $v'$ need not
+exist in the classical sense everywhere. A hat function --- kinked, not
+differentiable at its peak --- is in $V$, because that single bad point has zero
+length and contributes nothing to $\int(v')^{2}$. That is deliberate: the space
+was designed to be exactly big enough to hold the piecewise-linear shapes
+finite elements are built from.
+
+The whole distinction comes down to \textbf{kink versus jump}
+(Figure~\ref{fig:kinkjump}), and it is worth learning once because the same two
+words recur throughout the course.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\iftranscript\else % --- kink/jump figure: added analysis, not lecture content
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={font=\small}]
+
+% ---------- column headers ----------
+\node[font=\small\bfseries] at (1.6,3.15) {the shape $v(x)$};
+\node[font=\small\bfseries] at (6.6,3.15) {its derivative $v'(x)$};
+
+% ================= ROW 1 : KINK =================
+\begin{scope}[shift={(0,1.55)}]
+  \draw[->,gray] (-0.1,0) -- (3.4,0);
+  \draw[very thick,IntFrame] (0.2,0) -- (1.6,1.05) -- (3.0,0);
+  \fill[PitFrame] (1.6,1.05) circle (2pt);
+  \node[PitFrame,above right,font=\scriptsize] at (1.55,1.0) {corner};
+\end{scope}
+\begin{scope}[shift={(5,1.55)}]
+  \draw[->,gray] (-0.1,0) -- (3.4,0);
+  \draw[very thick,IntFrame] (0.2,0.62) -- (1.6,0.62);
+  \draw[very thick,IntFrame] (1.6,-0.62) -- (3.0,-0.62);
+  \draw[dotted,PitFrame,thick] (1.6,0.62) -- (1.6,-0.62);
+  \draw[IntFrame,fill=white] (1.6,0.62) circle (1.7pt);
+  \draw[IntFrame,fill=white] (1.6,-0.62) circle (1.7pt);
+  \node[right,font=\scriptsize] at (3.05,0.62) {$+1$};
+  \node[right,font=\scriptsize] at (3.05,-0.62) {$-1$};
+  \node[PitFrame,right,font=\scriptsize] at (1.72,0.05) {finite jump};
+\end{scope}
+\node[left,font=\small\bfseries,MEFrame] at (-0.35,1.55) {KINK};
+\node[right,align=left,font=\scriptsize] at (8.9,1.55)
+  {$\displaystyle\int (v')^{2}$ \textbf{finite}\\[1pt] $v\in V$ \ \cmark};
+
+% ================= ROW 2 : JUMP =================
+\begin{scope}[shift={(0,-0.75)}]
+  \draw[->,gray] (-0.1,0) -- (3.4,0);
+  \draw[very thick,IntFrame] (0.2,0) -- (1.1,0);
+  \draw[very thick,IntFrame] (1.1,0.95) -- (2.1,0.95);
+  \draw[very thick,IntFrame] (2.1,0) -- (3.0,0);
+  \draw[dotted,PitFrame,thick] (1.1,0) -- (1.1,0.95);
+  \draw[dotted,PitFrame,thick] (2.1,0) -- (2.1,0.95);
+  \draw[IntFrame,fill=white] (1.1,0)    circle (1.7pt);
+  \draw[IntFrame,fill=white] (2.1,0.95) circle (1.7pt);
+  \node[PitFrame,above,font=\scriptsize] at (1.6,1.0) {gap};
+\end{scope}
+\begin{scope}[shift={(5,-0.75)}]
+  \draw[->,gray] (-0.1,0) -- (3.4,0);
+  \draw[very thick,-{Latex[length=2.5mm]},PitFrame] (1.1,0) -- (1.1,1.0);
+  \draw[very thick,-{Latex[length=2.5mm]},PitFrame] (2.1,0) -- (2.1,-1.0);
+  \node[PitFrame,right,font=\scriptsize] at (1.18,0.85) {$+\delta$};
+  \node[PitFrame,right,font=\scriptsize] at (2.18,-0.85) {$-\delta$};
+  \node[right,font=\scriptsize] at (2.65,0.5) {spikes};
+\end{scope}
+\node[left,font=\small\bfseries,PitFrame] at (-0.35,-0.75) {JUMP};
+\node[right,align=left,font=\scriptsize] at (8.9,-0.75)
+  {$\displaystyle\int (v')^{2}=\infty$\\[1pt] $v\notin V$ \ \xmark};
+
+\end{tikzpicture}
+
+\caption{\textbf{Kink versus jump.} A \emph{kink} is a break in the slope: the
+shape stays connected, so the strain merely jumps between two finite values and
+the energy $\int(v')^{2}$ stays finite. A \emph{jump} is a break in the shape
+itself: the strain becomes a delta spike and the energy is infinite.
+Mechanically, a kink is a \textbf{material interface} (steel glued to
+aluminium: displacement continuous, strain jumps because $E$ jumps) --- ordinary
+and everywhere. A jump is a \textbf{broken bar}. $V$ admits the first and
+excludes the second, automatically, with no continuity rule written
+anywhere.}
+\label{fig:kinkjump}
+\end{figure}
+\fi
+
+\begin{mechanics}[the same rule for beams: why they need rotational DOFs]
+The rule generalises: \emph{the highest derivative appearing in the energy
+fixes the space, which fixes the continuity the elements must have.} Working it
+out for a beam explains an element-selection rule you already follow.
+
+For a beam the derivative ladder is shifted up by one rung, because bending
+energy lives in \emph{curvature} rather than in stretch:
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+ & \textbf{Bar (this course, for now)} & \textbf{Beam (Euler--Bernoulli)}\\
+\midrule
+field                & $v$ = axial displacement      & $w$ = transverse deflection\\
+first derivative     & $v'$ = strain $\eps$          & $w'$ = slope $\theta$\\
+second derivative    & ---                            & $w''$ = curvature $\kappa$\\
+internal measure     & $\sigma = E v'$                & $M = EI\,w''$ (bending moment)\\
+\textbf{energy}      & $\tfrac12\int EA\,(v')^{2}$    & $\tfrac12\int EI\,(w'')^{2}$\\
+equilibrium          & $-(EA\,v')' = f$ \ (2nd order) & $(EI\,w'')'' = q$ \ (4th order)\\
+space                & $H^{1}$: $\int (v')^{2}<\infty$ & $H^{2}$: $\int (w'')^{2}<\infty$\\
+must stay continuous & $v$                            & $w$ \emph{and} $w'$\\
+forbidden            & jump in $v$ (a break)          & jump in $w'$ (a hinge)\\
+element              & $C^{0}$, DOF $\{w\}$           & $C^{1}$, DOF $\{w,\theta\}$\\
+basis                & linear hat (Lagrange)          & cubic Hermite\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Now run the Figure~\ref{fig:kinkjump} argument one rung higher. For the bar, a
+\emph{jump in $v$} gives a delta in $v'$ and infinite energy, so it is
+forbidden; a \emph{kink in $v$} is fine. For the beam the energy contains
+$w''$, so the thing that must not jump is $w'$:
+\begin{center}
+\begin{tabular}{@{}l@{\ }c@{\ }l@{\ }c@{\ }l@{}}
+bar:  & jump in $v$  & $\Rightarrow$ $\delta$ in $v'$   & $\Rightarrow$ & $\int(v')^{2}=\infty$ \ \xmark\\
+beam: & jump in $w'$ & $\Rightarrow$ $\delta$ in $w''$  & $\Rightarrow$ & $\int(w'')^{2}=\infty$ \ \xmark\\
+\end{tabular}
+\end{center}
+
+\textbf{What a slope jump physically is: a hinge.} A kink in a beam's deflected
+shape means the two sides meet at an angle. The curvature there is infinite ---
+you have turned through a finite angle over zero length --- so the bending
+energy $\tfrac12\int EI\kappa^{2}$ is infinite. A genuine continuous beam
+cannot do this. (A real hinge \emph{can}, but only because it has $EI=0$ there,
+so it stores no energy; that is a different structure, and you model it by
+deliberately releasing the rotational DOF.)
+
+\textbf{The consequence for elements.} Two adjacent bar elements sharing a node
+share one number, the displacement --- and that alone makes $v$ continuous, so
+$C^{0}$ suffices. Two adjacent beam elements must agree on \emph{both} the
+deflection and the rotation at the shared node, or a hinge appears at every
+node of your mesh. That is why a beam element carries $\{w_{1},\theta_{1},
+w_{2},\theta_{2}\}$ --- four DOFs, hence a cubic ($C^{1}$ Hermite) shape
+function --- while a bar element carries only $\{w_{1},w_{2}\}$.
+
+So when a solver gives a beam or shell node rotational degrees of freedom and a
+truss or solid node none, that is not a modelling convention. It is forced by
+which derivative appears in the energy. Plates and shells are the 2D version of
+the same statement.
+\end{mechanics}
+
+\begin{pitfall}[why the trial space suddenly needs only \emph{one} derivative]
+Compare \eqref{eq:mult} with \eqref{eq:ibp1d}. Before integrating by parts, $u$
+is hit with two derivatives. After, the derivatives are shared: one on $u$, one
+on $v$. Nothing was approximated --- the two lines are equal --- but the
+smoothness demanded of $u$ has dropped from $C^{2}$ to ``$u'$ square
+integrable.''
+
+That trade is the entire reason the weak form exists, and it is why FEM can use
+$C^{0}$ elements to solve a second-order PDE. In ME language: the principle of
+virtual work never asked for the second derivative of displacement in the first
+place. It only ever needed strains.
+\end{pitfall}
+
+\medskip
+\noindent\textbf{Note.} Functions in $V$ are continuous.
+\begin{enumerate}[label=(\arabic*),leftmargin=2em,itemsep=3pt]
+  \item $\displaystyle\int_{0}^{1} v^{2}\dx < \infty$ \emph{admits}
+        discontinuous functions:
+        \begin{center}
+        \begin{tikzpicture}[scale=0.9]
+          \draw[-] (-0.3,0) -- (4.3,0);
+          \draw[thick] (1.0,0) -- (1.0,0.9) -- (1.8,0.9) -- (1.8,0);
+          \draw (0,-0.12) -- (0,0.12);
+          \draw (4,-0.12) -- (4,0.12);
+          \node[below] at (0,-0.12) {\scriptsize$0$};
+          \node[below] at (4,-0.12) {\scriptsize$1$};
+        \end{tikzpicture}
+        \end{center}
+  \item $\displaystyle\int_{0}^{1}\bigl[v'\bigr]^{2}\dx$ does \emph{not} allow
+        discontinuities in $V$.
+\end{enumerate}
+
+\begin{intuition}[a jump in displacement means the bar is broken]
+It is condition (2), not (1), that forces continuity --- and the mechanical
+reading is immediate. If $v$ jumps at a point, the bar has separated there:
+a gap has opened. The strain at that point is infinite (a finite displacement
+change over zero length), so the strain energy is infinite.
+
+$V$ therefore excludes cracked configurations automatically, without anyone
+writing down a continuity requirement. Requiring finite energy \emph{implies}
+$C^{0}$. Lecture 2 verifies this by explicit computation with a step function,
+and the answer comes out $+\infty$ exactly as this picture predicts.
+
+This also explains the $C^{0}$ compatibility requirement you know from element
+selection: adjacent elements must share displacement along their common edge,
+or the assembled field has a jump there and the energy is meaningless.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Summary: what the strong and weak forms each demand}
+
+\begin{pitfall}[the weak form needs $H^{1}$, \emph{not} $C^{1}$]
+An easy slip is to say ``strong needs $C^{2}$, weak needs $C^{1}$.'' The second
+half is wrong, and the difference is the whole point:
+\begin{align*}
+  C^{1}&:\ u' \text{ exists \emph{and is continuous}}
+       &&\Longrightarrow\ \textbf{no kink in } u\\[2pt]
+  H^{1}&:\ \textstyle\int (u')^{2}\dx<\infty,\ u' \text{ may jump}
+       &&\Longrightarrow\ \textbf{kink in } u \textbf{ allowed}
+\end{align*}
+$H^{1}$ is \emph{weaker} than $C^{1}$:
+\[
+  C^{2}\ \subset\ C^{1}\ \subset\ H^{1}\ \subset\ C^{0}.
+\]
+Had the weak form demanded $C^{1}$, hat functions would be illegal and
+piecewise-linear FEM could not exist.
+\end{pitfall}
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+ & \textbf{Strong form} ($u\in\Ck[(0,1)]{2}$) & \textbf{Weak form} ($u\in V=H^{1}_{0}$)\\
+\midrule
+demands on $u$   & $u,u',u''$ all continuous & $u$ continuous, $\int(u')^{2}<\infty$\\
+$u'$ may jump?   & no  \xmark               & \textbf{yes} \cmark\\
+$u''$ required?  & yes                       & never appears\\
+equation holds   & at every point            & in an integral (averaged) sense\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What the weak form buys.}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+ & \textbf{strong} & \textbf{weak}\\
+\midrule
+material interface ($a$ jumps) & no solution \xmark & fine \cmark\\
+point load, re-entrant corner  & no solution \xmark & fine \cmark\\
+hat functions                  & illegal \xmark     & legal \cmark \ (FEM exists only here)\\
+element must compute           & $u''$              & only $u'$ (the $\bm{B}$ matrix)\\
+natural BC (traction)          & imposed by hand    & free --- appears in the load vector\\
+existence/uniqueness           & no theory          & Lax--Milgram ($H^{1}$ is Hilbert)\\
+sparsity                       & ---                & small-support kinked basis $\Rightarrow$ banded $\Kmat$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What it costs.}
+\begin{itemize}[leftmargin=1.5em,itemsep=1pt]
+  \item The PDE cannot be checked at a point --- only weighted averages of it.
+  \item Strain and stress come out \emph{discontinuous} across element
+        boundaries; contour plots need smoothing before presentation.
+  \item Derivatives are one order less accurate than the displacement, and are
+        best sampled at Gauss points rather than nodes.
+  \item Conceptual overhead: Sobolev spaces and weak derivatives, i.e.\ the
+        first two lectures of this course.
+\end{itemize}
+
+\begin{intuition}[the trade in one line]
+\[
+  \textbf{strong: } \text{demand a lot of } u \;\Rightarrow\;
+  \text{pointwise information, but usually \emph{no solution}}
+\]
+\[
+  \textbf{weak: } \text{demand little of } u \;\Rightarrow\;
+  \text{a solution always exists, but only in energy terms}
+\]
+Engineering keeps the weak form because ``no solution at all'' is a worse
+problem than ``stress needs smoothing before you plot it.''
+\end{intuition}

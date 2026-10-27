@@ -1,0 +1,71 @@
+% ============================================================
+%  macros.tex  --  FEM notation shortcuts
+% ============================================================
+
+% ---------- sets ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Om}{\Omega}
+\newcommand{\dOm}{\partial\Omega}
+\newcommand{\GD}{\Gamma_{\!D}}          % Dirichlet boundary
+\newcommand{\GN}{\Gamma_{\!N}}          % Neumann boundary
+
+% ---------- function spaces ----------
+\newcommand{\Ltwo}[1][\Om]{L^{2}(#1)}
+\newcommand{\Hs}[2][\Om]{H^{#2}(#1)}
+\newcommand{\Hone}[1][\Om]{H^{1}(#1)}
+\newcommand{\Honez}[1][\Om]{H^{1}_{0}(#1)}
+\newcommand{\Ck}[2][\Om]{C^{#2}(#1)}
+\newcommand{\Cinfz}[1][\Om]{C^{\infty}_{c}(#1)}
+\newcommand{\Vsp}{V}                    % trial/test space
+\newcommand{\Vh}{V_{h}}                 % discrete subspace
+
+% ---------- solutions ----------
+\newcommand{\uh}{u_{h}}
+\newcommand{\vh}{v_{h}}
+\newcommand{\eh}{e_{h}}
+\newcommand{\Ih}{\mathcal{I}_{h}}       % interpolant
+\newcommand{\Th}{\mathcal{T}_{h}}       % triangulation
+\newcommand{\Kel}{K}                    % generic element
+\newcommand{\Kref}{\widehat{K}}         % reference element
+
+% ---------- operators ----------
+\renewcommand{\div}{\operatorname{div}}
+\newcommand{\grad}{\nabla}
+\newcommand{\lap}{\Delta}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\dx}{\dd x}
+\newcommand{\ds}{\dd s}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\nn}{\bm{n}}                % outward normal
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\tr}{\operatorname{tr}}
+
+% ---------- forms, norms, pairings ----------
+\newcommand{\bl}[2]{a(#1,#2)}                            % bilinear form
+\newcommand{\Lf}[1]{\ell(#1)}                            % linear functional
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\newcommand{\Lnorm}[2][\Om]{\norm{#2}_{\Ltwo[#1]}}
+\newcommand{\Hnorm}[2][\Om]{\norm{#2}_{\Hone[#1]}}
+\newcommand{\Enorm}[1]{\vertiii{#1}}                     % energy norm
+\newcommand{\vertiii}[1]{{\left\vert\kern-0.25ex\left\vert\kern-0.25ex\left\vert #1
+  \right\vert\kern-0.25ex\right\vert\kern-0.25ex\right\vert}}
+\newcommand{\ipL}[3][\Om]{\left(#2,#3\right)_{#1}}       % L2 inner product
+\newcommand{\dual}[2]{\left\langle #1,#2\right\rangle}   % duality pairing
+
+% ---------- discrete / matrix ----------
+\newcommand{\Kmat}{\bm{K}}              % stiffness matrix
+\newcommand{\Mmat}{\bm{M}}              % mass matrix
+\newcommand{\Fvec}{\bm{F}}              % load vector
+\newcommand{\Uvec}{\bm{U}}              % dof vector
+\newcommand{\phih}{\varphi}             % basis function
+\newcommand{\dofs}{\mathrm{dof}}
+
+% ---------- misc ----------
+\newcommand{\eps}{\varepsilon}
+\newcommand{\defeq}{\coloneqq}
+\newcommand{\ie}{i.e.\ }
+\newcommand{\eg}{e.g.\ }
+\newcommand{\wrt}{with respect to }

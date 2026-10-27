@@ -1,0 +1,239 @@
+\lecture{Neumann assembly and the first error estimate}{Lecture 6 --- Friday, September 4, 2026}{Math 6660 --- \texttt{6th.pdf}}
+
+\begin{roadmap}[Lecture 6]
+\roadq{How wrong is the FEM answer, and measured how?}
+\begin{roadlist}
+\item Assemble the Neumann problem explicitly first --- the boundary rows are
+  where the natural BC shows up.
+\item Then error analysis begins. Two \textbf{norms} matter: the energy norm
+  (strain energy stored in the error) and the $L^{2}$ norm (plain size of the
+  error).
+\item First \textbf{a priori} estimate: the FEM error is bounded by the
+  \emph{interpolation} error --- by how well the mesh could represent $u$ at
+  best, regardless of the method.
+\end{roadlist}
+\payoff{Convergence studies: knowing what slope to expect before you run one.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Setup, restated}
+
+\begin{equation}
+  -(au')'=f \ \text{ in }(0,1),
+  \qquad
+  \underbrace{u(0)=0}_{\text{Dirichlet}},
+  \qquad
+  \underbrace{a(1)u'=g_{1}}_{\text{Neumann}}
+\end{equation}
+\begin{equation}
+  \Vsp=\Bigl\{v:\textstyle\int\bigl[v^{2}+(v')^{2}\bigr]\dx<\infty,\ \
+  \underbrace{v(0)=0}_{\text{strongly enforced}}\Bigr\}
+\end{equation}
+
+\paragraph{CG(1) method.}
+\begin{equation}
+  U(x)=\sum_{j=1}^{M+1}\xi_{j}\phih_{j}(x)
+  \qquad
+  \text{\small trial solution; the $+1$ is because the last node is unknown}
+\end{equation}
+\begin{equation}\label{eq:neuweak}
+  \int_{0}^{1} a U'v'\dx = \int_{0}^{1} f v\dx
+  + \underbrace{g_{1}v(1)}_{\text{Neumann --- weakly enforced}},
+  \qquad v=\phih_{i},\ \ i=1,2,\dots,M+1 .
+\end{equation}
+
+% ==================================================================
+\subsection*{Example: $a=1$, uniform mesh $h_{i}\equiv h$}
+
+\begin{equation}
+  \sum_{j=1}^{M+1}\xi_{j}\int_{0}^{1}\phih_{i}'\phih_{j}'\dx
+  = \int_{0}^{1} f\phih_{i}\dx + g_{1}\phih_{i}(1)
+\end{equation}
+
+The new entries, all on the last row and column:
+\begin{align}
+  A_{(M,M+1)} &= \int_{x_{M}}^{x_{M+1}}\phih_{M+1}'\,\phih_{M}'\dx
+    = -\frac{1}{h^{2}}\int_{x_{M}}^{x_{M+1}}\dx = -\frac{1}{h},\\
+  A_{(M+1,M)} &= -\frac{1}{h}
+    \qquad\Longrightarrow\quad \text{symmetric matrix},\\
+  A_{(M+1,M+1)} &= \int_{x_{M}}^{x_{M+1}}\bigl(\phih_{M+1}'\bigr)^{2}\dx
+    = \frac{1}{h}.
+\end{align}
+
+So $\underline{\underline{A}}\,\underline{\xi}=\underline{b}$ with
+$\underline{\xi}=(\xi_{1},\xi_{2},\xi_{3},\dots,\xi_{M+1})$ and
+\begin{equation}\label{eq:Aneu}
+  A=\frac{1}{h}
+  \begin{bmatrix}
+    2 & -1 &        &    &    \\
+   -1 &  2 & -1     &    &    \\
+      & \ddots & \ddots & \ddots & \\
+      &    & -1 & 2 & -1\\
+      &    &    & -1 & \boxed{1}
+  \end{bmatrix},
+  \qquad
+  A\in\R^{(M+1)\times(M+1)},\ \text{symmetric, positive definite.}
+\end{equation}
+\begin{equation}
+  b_{i}=\int_{x_{i-1}}^{x_{i+1}} f\phih_{i}\dx \ \ (i=1,\dots,M),
+  \qquad
+  b_{M+1}=\int_{x_{M}}^{x_{M+1}} f\phih_{M+1}\dx + g_{1}.
+\end{equation}
+
+\begin{intuition}[the last diagonal entry is $1$, not $2$]
+Every interior node has two elements attached, contributing $1/h$ each: hence
+$2/h$. The end node $x_{M+1}$ has only \emph{one} element, so it gets $1/h$.
+
+The $2,-1$ pattern was never a rule --- it is just ``sum of the elements meeting
+at this node.'' This is exactly element-by-element assembly: each element
+contributes $\frac{1}{h}\begin{psmallmatrix}1&-1\\-1&1\end{psmallmatrix}$ to its
+two nodes, and the boundary node collects one copy instead of two.
+
+Note also $g_{1}$ enters $b_{M+1}$ alone, as a plain \emph{nodal force} --- the
+end traction assembled to the end node. No mystery.
+\end{intuition}
+
+\medskip
+\noindent\textbf{Note: for the 2-pt BVP.}
+\begin{enumerate}[label=\textcircled{\scriptsize\arabic*},leftmargin=2.2em,itemsep=2pt]
+  \item Dirichlet BCs are \textbf{strongly} enforced \ (essential).
+  \item Neumann or mixed BCs are \textbf{weakly} enforced \ (natural BCs).
+\end{enumerate}
+
+\begin{dictionary}[the two BC types]
+essential / Dirichlet / strong & prescribed displacement; built into $\Vsp$; removes a DOF; exact\\
+natural / Neumann / weak & applied traction; appears in $\Fvec$; adds no constraint; approximate\\
+\end{dictionary}
+
+% ==================================================================
+\subsection*{Error analysis}
+
+Two kinds of error estimates:
+\begin{enumerate}[label=\textcircled{\scriptsize\arabic*},leftmargin=2.2em,itemsep=4pt]
+  \item \textbf{a priori}: error estimate in terms of derivatives of the exact
+        solution, \eg
+        \[
+          \underbrace{\norm{u}}_{}\;\dots\;
+          \norm{\underbrace{u}_{\text{exact}}-\underbrace{U}_{\text{FEA}}}
+          \;\le\; \underbrace{C}_{\text{constant}}\,
+          h^{\,\underbrace{p}_{\mathclap{\text{order of shape function}}}}\,
+          \norm{u^{(\ell)}}
+          \qquad \ell^{\text{th}}\text{ derivative of } u .
+        \]
+  \item \textbf{a posteriori}: ``error estimates in terms of a residual'', \eg
+        $\mathcal{L}(U)-f$. Useful for calculating error \emph{during} the
+        simulation $\Rightarrow$ adaptive error control (adaptive mesh
+        refinement).
+\end{enumerate}
+
+\begin{intuition}[before vs.\ after]
+A priori uses $u$, which you do not have --- it predicts the \emph{rate}
+($h^{p}$), so it tells you what refinement buys before you run anything.
+A posteriori uses $U$, which you do have --- it says \emph{where} the error is,
+which is what drives adaptive remeshing.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\subsection*{Norms}
+
+Let $e(x)\defeq u(x)-U(x)$ be the error.
+\begin{align}
+  \text{``Energy'' norm:}  &\qquad \norm{v}_{E} = \sqrt{\int_{0}^{1} a(x)\bigl[v'(x)\bigr]^{2}\dx}\\
+  \text{weighted $L_{2}$-norm:} &\qquad \norm{w}_{a} = \sqrt{\int_{0}^{1} a(x)\bigl[w(x)\bigr]^{2}\dx}
+\end{align}
+\begin{equation}\label{eq:normlink}
+  \textbf{Note: } \norm{v}_{E}=\norm{v'}_{a}.
+\end{equation}
+
+\begin{mechanics}
+$\norm{v}_{E}^{2}=\int a(v')^{2}=2\times$ strain energy. Measuring error in the
+energy norm means measuring the strain energy of the error --- \ie how much
+stored energy your mesh is missing. It weights \emph{strain} error, not
+displacement error, which is why stress converges more slowly than displacement.
+\end{mechanics}
+
+\paragraph{Cauchy inequalities.}
+\begin{align}
+  \left|\int_{0}^{1} a v'w'\dx\right| &\le \norm{v'}_{a}\norm{w'}_{a}
+     = \norm{v}_{E}\norm{w}_{E}, \label{eq:cauchyE}\\
+  \left|\int_{0}^{1} v w\dx\right| &\le \norm{v}_{a}\norm{w}_{a^{-1}}.
+\end{align}
+
+% ------------------------------------------------------------------
+\subsection*{An a priori error estimate}
+
+CG(1) for homogeneous Dirichlet BCs: $-(au')'=f$ in $(0,1)$, $u(0)=u(1)=0$.
+
+\paragraph{Error calculation.}
+\begin{align}
+  \int_{0}^{1} a U'v'\dx &= \int_{0}^{1} f v\dx \qquad \forall\, v\in\Vh\subset\Vsp, \\
+  \int_{0}^{1} a u'v'\dx &= \int_{0}^{1} f v\dx \qquad \forall\, v\in\Vsp .
+\end{align}
+Now subtract:
+\begin{equation}\label{eq:GO}
+  \boxed{\;\int_{0}^{1} a\,(u-U)'\,v'\dx = 0 \qquad \forall\, v\in\Vh\;}
+  \qquad \text{\textbf{Galerkin orthogonality}}
+\end{equation}
+
+\paragraph{Energy norm error estimate.} Using \eqref{eq:normlink},
+\begin{equation}
+  \norm{u-U}_{E}^{2} = \norm{(u-U)'}_{a}^{2}
+  = \int_{0}^{1} a\,(u-U)'(u-U)'\dx .
+\end{equation}
+For \emph{any} $v\in\Vh$, insert $-v+v$:
+\begin{align}
+  \norm{u-U}_{E}^{2}
+  &= \int_{0}^{1} a\,(u-U)'\,(u-v+v-U)'\dx \notag\\
+  &= \int_{0}^{1} a\,(u-U)'(u-v)'\dx
+   + \underbrace{\int_{0}^{1} a\,(u-U)'(v-U)'\dx}_{=\;0 \text{ by Galerkin orthogonality}} .
+\end{align}
+
+\medskip
+\noindent\textbf{Note.} $u-v\in\Vsp$, but $v-U\in\Vh$ --- which is what lets
+\eqref{eq:GO} kill the second term.
+
+\begin{pitfall}[the trick is choosing which difference lies in $\Vh$]
+$u-U$ is \emph{not} in $\Vh$ ($u$ is not a piecewise linear). But $v-U$
+\emph{is}, since both $v$ and $U$ are. Galerkin orthogonality only annihilates
+against members of $\Vh$, so the split $u-U=(u-v)+(v-U)$ is engineered to put a
+$\Vh$ member in the second slot.
+\end{pitfall}
+
+\medskip
+So, for any $v\in\Vh$,
+\begin{equation}
+  \norm{u-U}_{E}^{2} = \int_{0}^{1} a\,(u-U)'(u-v)'\dx .
+\end{equation}
+Using Cauchy \eqref{eq:cauchyE},
+\begin{equation}
+  \int_{0}^{1} a\,(u-U)'(u-v)'\dx \le \norm{(u-U)'}_{a}\,\norm{(u-v)'}_{a}
+  = \norm{u-U}_{E}\,\norm{u-v}_{E},
+\end{equation}
+so $\norm{u-U}_{E}^{2}\le \norm{u-U}_{E}\norm{u-v}_{E}$, and cancelling one
+factor:
+\begin{equation}\label{eq:cea1}
+  \boxed{\;\norm{u-U}_{E} \;\le\; \norm{u-v}_{E} \qquad \forall\, v\in\Vh\;}
+\end{equation}
+The FE solution $U$ is the best solution, meaning \emph{smallest in the energy
+norm}.
+
+\todoq{The middle line of my notes mixes the two norms
+($\norm{(u-U)'}_{E}$ where it should be $\norm{u-U}_{E}$, since
+$\norm{v}_{E}=\norm{v'}_{a}$ already carries the derivative). Restored above.}
+
+\begin{intuition}[C\'ea's lemma with constant $1$]
+Lecture 1's sample stated C\'ea with a factor $M/\alpha$. Here it is
+\emph{exactly} $1$ --- because the energy norm is built from the same $a$ as the
+bilinear form, so continuity and coercivity constants are both $1$ by
+construction.
+
+Read \eqref{eq:cea1} directly: $U$ is the closest point of $\Vh$ to $u$ in
+energy. No other piecewise linear on this mesh stores a more accurate energy.
+Combined with Galerkin orthogonality, $U$ is the orthogonal projection of $u$
+onto $\Vh$, and Pythagoras gives $\norm{U}_{E}\le\norm{u}_{E}$ ---
+\textbf{the FE model is too stiff}, as always.
+
+Practical reading: the solver is not the limit. Accuracy is set entirely by how
+well piecewise linears can represent $u$ on this mesh. Better answers come from
+a better mesh, not a better solve.
+\end{intuition}

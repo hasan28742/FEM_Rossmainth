@@ -1,0 +1,258 @@
+\lecture{Nonhomogeneous Dirichlet and Neumann BCs}{Lecture 5 --- Wednesday, September 2, 2026}{Math 6660 --- \texttt{5th.pdf}}
+
+\begin{roadmap}[Lecture 5]
+\roadq{What changes when the ends are not clamped at zero?}
+\begin{roadlist}
+\item \textbf{Prescribed displacement} (Dirichlet, ``essential''): construct a
+  function that already satisfies it and solve for the correction. This is the
+  \emph{lifting} trick, and in code it is the constrained-dof step.
+\item \textbf{Half-hat} basis functions appear at the boundary nodes.
+\item \textbf{Prescribed force} (Neumann, ``natural''): does not constrain the
+  space at all. It falls out of the integration by parts as an extra term on
+  the right-hand side.
+\end{roadlist}
+\payoff{The essential-vs-natural distinction in one sentence: displacement BCs
+modify $\Kmat$ and the space; force BCs modify $\Fvec$ only.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Nonhomogeneous Dirichlet BCs}
+
+\begin{equation}\label{eq:nhd}
+  -(au')' = f \ \text{ in } (0,1),
+  \qquad u(0)=\alpha,\quad u(1)=\beta .
+\end{equation}
+
+\paragraph{Variational problem.} Integrating by parts,
+\begin{equation}
+  \int_{0}^{1} a u'v'\dx - \Bigl[a u'v\Bigr]_{0}^{1} = \int_{0}^{1} f v\dx .
+\end{equation}
+To make the boundary term vanish, define two spaces:
+\begin{align}
+  \Vsp   &= \Bigl\{ v : \textstyle\int_{0}^{1}\bigl[v^{2}+(v')^{2}\bigr]\dx <\infty,\ \ v(0)=\alpha,\ v(1)=\beta \Bigr\},\\
+  \Vsp_0 &= \Bigl\{ v : \textstyle\int_{0}^{1}\bigl[v^{2}+(v')^{2}\bigr]\dx <\infty,\ \ v(0)=0=v(1) \Bigr\}.
+\end{align}
+
+\begin{equation}\label{eq:nhdvar}
+  \text{Find } u\in \Vsp \text{ such that }
+  \int_{0}^{1} a u'v'\dx = \int_{0}^{1} f v\dx
+  \qquad \forall\, v\in \Vsp_{0}.
+\end{equation}
+
+\todoq{My notes write the integrability condition as $<\alpha$, but $\alpha$ is
+already the boundary value. It must be $<\infty$.}
+
+\begin{pitfall}[trial $\ne$ test --- this is the case Lecture 2 warned about]
+$u\in\Vsp$ but $v\in\Vsp_{0}$. Lecture 2 noted they coincide only when the
+essential BC is homogeneous; \eqref{eq:nhd} is exactly the case where they part.
+$\Vsp$ is not even a vector space --- $u_1+u_2$ has boundary value $2\alpha$.
+\end{pitfall}
+
+\begin{mechanics}
+$\Vsp$ = displacement fields that satisfy the prescribed support movement.
+$\Vsp_{0}$ = virtual displacements, which must not violate the supports.
+A settling foundation moves the structure; the virtual motion still respects it.
+\end{mechanics}
+
+% ------------------------------------------------------------------
+\subsection*{Half-hat functions}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.0]
+  \draw[->,gray!70] (-0.3,0) -- (9.0,0);
+  \foreach \x/\l in {0/{x_{0}=0}, 1.5/{x_{1}}, 2.6/{x_{2}}, 6.4/{x_{M}}, 8.0/{x_{M+1}=1}}{
+    \draw[thick] (\x,-0.1) -- (\x,0.1);
+    \node[below,font=\scriptsize] at (\x,-0.14) {$\l$};}
+  \node at (4.6,0) {\scriptsize$\cdots$};
+  \draw[very thick,PitFrame] (0,1.0) -- (1.5,0);
+  \draw[very thick,PitFrame] (6.4,0) -- (8.0,1.0);
+  \draw[dashed,gray!60] (0,1.0) -- (8.0,1.0);
+  \node[left,font=\scriptsize] at (-0.05,1.0) {$1$};
+  \node[PitFrame,font=\scriptsize,right] at (0.15,0.75) {$\phih_{0}$};
+  \node[PitFrame,font=\scriptsize,left]  at (7.85,0.75) {$\phih_{M+1}$};
+\end{tikzpicture}
+\end{center}
+
+Use the same basis $\phih_{j}(x)$, $j=1,\dots,M$, and introduce two
+\emph{half-hat} functions:
+\begin{equation}\label{eq:halfhat}
+  \phih_{0}(x)=\frac{x_{1}-x}{x_{1}-x_{0}},\ \ x\in(x_{0},x_{1});
+  \qquad
+  \phih_{M+1}(x)=\frac{x-x_{M}}{x_{M+1}-x_{M}},\ \ x\in[x_{M},x_{M+1}].
+\end{equation}
+
+\paragraph{Trial function.}
+\begin{equation}\label{eq:lift}
+  U(x) = \alpha\,\phih_{0}(x) + \beta\,\phih_{M+1}(x)
+         + \sum_{j=1}^{M}\xi_{j}\,\phih_{j}(x).
+\end{equation}
+\paragraph{Test functions.} $v=\phih_{i}(x)$, $i=1,\dots,M$.
+
+\medskip
+\noindent
+\textbf{\#} homogeneous means the boundary is zero:
+$\alpha=\beta\ne0$ is \emph{not} homogeneous; $\alpha=\beta=0$ is homogeneous.
+
+\begin{intuition}[the first two terms are a prescribed-displacement lift]
+$\alpha\phih_{0}+\beta\phih_{M+1}$ is a fixed, known function that carries the
+boundary data --- nothing in it is solved for. Only the $\xi_{j}$ are unknowns,
+so $\dim\Vh$ is still $M$.
+
+This is what a solver does when you prescribe a nonzero DOF: it does not add an
+equation, it moves that column's contribution to the right-hand side.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\subsection*{The modified system}
+
+Substituting \eqref{eq:lift} into \eqref{eq:nhdvar}:
+\begin{equation}
+  \sum_{j=1}^{M}\xi_{j}\int_{0}^{1} a\,\phih_{i}'\phih_{j}'\dx
+  \;+\;\alpha\int_{0}^{1} a\,\phih_{0}'\phih_{i}'\dx
+  \;+\;\beta\int_{0}^{1} a\,\phih_{M+1}'\phih_{i}'\dx
+  \;=\;\int_{0}^{1} f\phih_{i}\dx .
+\end{equation}
+Moving the known terms across, and using
+$\phih_{0}'=-1/h_{1}$, $\phih_{1}'=+1/h_{1}$ on $(x_{0},x_{1})$:
+\begin{equation}\label{eq:nhdsystem}
+  \boxed{\;
+  \sum_{j=1}^{M}\xi_{j}\int_{0}^{1} a\,\phih_{i}'\phih_{j}'\dx
+  = \int_{0}^{1} f\phih_{i}\dx
+  + \delta_{1i}\,\frac{\alpha}{h_{1}^{2}}\int_{x_{0}}^{x_{1}} a(x)\dx
+  + \delta_{Mi}\,\frac{\beta}{h_{M+1}^{2}}\int_{x_{M}}^{x_{M+1}} a(x)\dx \;}
+\end{equation}
+
+\begin{intuition}[the BC becomes a load on the first and last equation only]
+The Kronecker deltas confine the new terms to rows $1$ and $M$. Every interior
+equation is untouched.
+
+Reason: $\phih_{0}$ overlaps only $\phih_{1}$, so
+$\int a\,\phih_{0}'\phih_{i}'=0$ for $i\ge2$. Small support again.
+
+Mechanically, $\Kmat$ is unchanged and $\Fvec$ picks up a reaction-like entry at
+the constrained nodes --- exactly the ``move the known DOF to the RHS'' step.
+\end{intuition}
+
+\medskip
+\noindent\textbf{Note.} Dirichlet BCs are enforced \emph{strongly} and modify
+the RHS $\Rightarrow$ no error in the BCs. In FEM language, Dirichlet BCs are
+called \textbf{essential} BCs: they must be imposed in the definition of the
+function space $\Vsp$.
+
+\todoq{My notes read ``No error in BC from BCs'' --- garbled. I have written
+``no error in the BCs,'' \ie the boundary values are reproduced exactly.}
+
+% ==================================================================
+\subsection*{Neumann BCs}
+
+\begin{equation}\label{eq:neu}
+  -(au')'=f \ \text{ in } (0,1),
+  \qquad
+  \underbrace{u(0)=0}_{\text{Dirichlet}},
+  \qquad
+  \underbrace{a(1)u'(1)=g_{1}}_{\text{Neumann}} .
+\end{equation}
+Here
+\begin{equation}\label{eq:Vneu}
+  \Vsp = \Bigl\{ v : \textstyle\int_{0}^{1}\bigl(v^{2}+(v')^{2}\bigr)\dx<\infty,\ \ v(0)=0 \Bigr\}.
+\end{equation}
+\textbf{Only $v(0)=0$ is imposed} --- nothing is required at $x=1$.
+
+Integrating by parts:
+\begin{equation}
+  \int_{0}^{1} a u'v'\dx
+  - \underbrace{a(1)u'(1)}_{=\,g_{1}}v(1)
+  + a(0)u'(0)\underbrace{v(0)}_{=\,0}
+  = \int_{0}^{1} f v\dx ,
+\end{equation}
+\begin{equation}\label{eq:neuvar}
+  \Longrightarrow\quad
+  \int_{0}^{1} a u'v'\dx - g_{1}v(1) = \int_{0}^{1} f v\dx
+  \qquad \forall\, v\in\Vsp .
+\end{equation}
+
+\begin{intuition}[the Neumann datum lands in the load vector]
+Compare with the Dirichlet case. There the boundary term was \emph{killed} by
+forcing $v=0$; here it is \emph{kept}, because $g_{1}$ is known. It moves to the
+RHS as $+g_{1}v(1)$ --- a load, not a constraint.
+
+$g_{1}=a(1)u'(1)=N(1)$ is the end force. So ``apply a traction'' really is just
+adding a term to $\Fvec$, and that is why you constrain displacement DOFs
+explicitly in a solver but merely \emph{apply} a traction.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\subsection*{Recovering the BVP (Neumann case)}
+
+\textbf{Q:} is the solution of the variational problem also a solution of the
+2-pt BVP?
+
+Start from \eqref{eq:neuvar} and reverse the integration by parts:
+\begin{equation}
+  -\int_{0}^{1}(au')'v\dx + a(1)u'(1)v(1) = \int_{0}^{1} f v\dx + g_{1}v(1).
+\end{equation}
+This must hold for all $v\in\Vsp$, \emph{including} all $v\in\Vsp$ with
+$v(1)=0$. For those,
+\begin{equation}
+  \int_{0}^{1} f v\dx = -\int_{0}^{1}(au')'v\dx
+  \quad \forall\, v\in\Vsp \text{ with } v(1)=0
+  \quad\Longrightarrow\quad -(au')'=f \ \text{ in } (0,1).
+\end{equation}
+Putting that back leaves $a(1)u'(1)v(1)=g_{1}v(1)$, and since $v(1)$ is
+arbitrary,
+\begin{equation}
+  \boxed{\,a(1)u'(1)=g_{1}\,}
+\end{equation}
+
+\begin{intuition}[the BC was never imposed --- it fell out]
+Two-stage argument: restricting to $v(1)=0$ recovers the PDE (Lecture 2's
+localisation), then releasing $v(1)$ recovers the Neumann condition.
+
+$g_{1}$ was never put into $\Vsp$, yet the solution satisfies it. That is what
+\textbf{natural} means: satisfied automatically, not enforced. It is also why
+Neumann data is only met approximately by the discrete solution --- see the last
+note below.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\subsection*{CG(1) for the Neumann problem}
+
+\begin{align}
+  \Vh &= \bigl\{ v\in\Vsp : v|_{[x_{j},x_{j+1}]} = \text{polynomial of degree }1 \bigr\}\\
+  \Vh &= \operatorname{span}\bigl\{\phih_{1},\phih_{2},\dots,\phih_{M},
+         \underbrace{\phih_{M+1}}_{\text{new}}\bigr\}
+\end{align}
+$\phih_{M+1}$ is the half-hat at the right end point. Trial function:
+\begin{equation}
+  U(x)=\sum_{j=1}^{M+1}\xi_{j}\phih_{j}(x),
+  \qquad
+  \int_{0}^{1} a U'v'\dx = \int_{0}^{1} f v\dx + g_{1}v(1)
+  \quad\forall\, v\in\Vh,
+\end{equation}
+with $v=\phih_{i}$, $i=1,2,\dots,M,\underbrace{M+1}_{\text{new}}$. Note
+\begin{equation}
+  \phih_{i}(1)=0 \ \ \forall\, i=1,\dots,M,
+  \qquad
+  \phih_{M+1}(1)=1 \ \ \text{--- the only one nonzero at } x=1 .
+\end{equation}
+
+\begin{intuition}[$M+1$ unknowns now, not $M$]
+$x_{M+1}$ is no longer prescribed, so its nodal value is an unknown and the
+system grows by one. Dirichlet removes a DOF; Neumann does not.
+
+Since $\phih_{M+1}$ is the only basis function nonzero at $x=1$, the term
+$g_{1}v(1)$ contributes to exactly one entry of $\Fvec$ --- the last.
+\end{intuition}
+
+\medskip
+\noindent
+\textbf{At $x=1$, what is the error?} $\Rightarrow$ \textbf{Not zero.}
+
+\begin{pitfall}[Dirichlet is exact at the boundary, Neumann is not]
+Strongly enforced (Dirichlet): the boundary value is built into the space, so
+the discrete solution matches it \emph{exactly}. Weakly enforced (Neumann): the
+condition only holds in the limit, so $a(1)U'(1)\ne g_{1}$ on a finite mesh.
+
+You have seen this: prescribed displacements come back exactly, while reaction
+forces and surface tractions carry discretisation error and need a finer mesh.
+\end{pitfall}

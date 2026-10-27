@@ -1,0 +1,140 @@
+% ============================================================
+%  hw1_statement.tex
+%  Exact re-typesetting of hw1.pdf (MATH 6660, Homework 1, Fall 2026).
+%  Statement only -- nothing added, nothing removed.
+%  Build:  pdflatex hw1_statement.tex   (run twice for the (1) references)
+% ============================================================
+\documentclass[11pt,leqno]{article}
+
+% geometry chosen to reproduce the measured layout of hw1.pdf:
+%   text block x: 54.0 .. 551.0 pt,  title ink top y=81.7,  folio y=723.0
+\usepackage[letterpaper,left=54pt,right=61pt,top=78pt,bottom=90pt,
+            headheight=30pt,headsep=14pt,footskip=30pt]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor={red!55!black},citecolor={red!55!black},
+            urlcolor={red!55!black},pdfborder={0 0 0}]{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textbf{Assigned:} Friday Aug. 28, 2026\\
+              \textbf{Due:} Friday Sept. 11, 2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\LL}{\mathcal{L}}
+
+\setlength{\parindent}{0pt}
+
+% measured from hw1.pdf: "1." at x=54.0, its text at x=67.9, "(b)" at x=71.9
+\setlist[enumerate,1]{leftmargin=13.9pt,labelsep=5.5pt,topsep=3pt,itemsep=4pt,parsep=0pt}
+\setlist[enumerate,2]{leftmargin=24.4pt,labelsep=5.5pt,topsep=3pt,itemsep=4pt,parsep=0pt}
+
+\begin{document}
+
+\begin{center}
+  {\large\textsc{MATH 6660: Homework 1}}\\
+  {\large\textsc{Fall 2026}}
+\end{center}
+
+\begin{enumerate}
+
+% ================================================================
+\item Consider the following 2-point BVP:
+\begin{gather*}
+  \LL\left(u\right) := -\bigl(a(x)\,u'\bigr)' = f(x) \quad \text{on} \quad 0<x<1,\\
+  u(0) = 0, \quad u(1) = 0,
+\end{gather*}
+where $f\in C^{0}(0,1)$, $a\in C^{1}(0,1)$, and $0<a_{1}\le a(x)\le a_{2}<\infty$.
+In class, we showed that for any two continuous functions on $(0,1)$, $u$ and
+$v$, that satisfy the boundary conditions, $u(0)=v(0)=u(1)=v(1)=0$, the
+operator, $\LL$, satisfies Green's formula:
+\[
+  \int_{0}^{1}\left[u\LL\left(v\right)-v\LL\left(u\right)\right]dx = 0.
+\]
+
+\begin{enumerate}
+
+\item Consider the associated eigenvalue problem:
+\begin{equation}\label{eq:1}
+  \LL\left(\phi\right) = \lambda\,\phi,
+\end{equation}
+where $\lambda$ is an eigenvalue and $\phi(x)$ is the corresponding
+eigenfunction. Prove that $\lambda$ must be real.
+\textbf{HINT:} start by showing that if $(\lambda,\phi(x))$ is an
+eigenvalue/eigenvector pair, then so is
+$(\overline{\lambda},\overline{\phi}(x))$, where $\overline{\,\cdot\,}$ means
+complex conjugation.
+
+\item Prove that two eigenfunctions, $\phi_{1}$ and $\phi_{2}$, corresponding to
+two different eigenvalues, $\lambda_{1}$ and $\lambda_{2}$, respectively, where
+$\lambda_{1}\neq\lambda_{2}$, are \textbf{orthogonal}:
+\[
+  \int_{0}^{1}\phi_{1}(x)\,\phi_{2}(x)\,dx = 0.
+\]
+
+\item Prove that all the eigenvalues of \eqref{eq:1} are strictly positive:
+$\lambda>0$. \textbf{HINT:} Multiply \eqref{eq:1} by $\phi$ and integrate over
+$(0,1)$.
+
+\item Let $a(x)\equiv1$. Consider the special case where the load function, $f$,
+is chosen as the Dirac delta centered at $s$:
+\[
+  \LL\left(G\right) = -G'' = \delta\left(x-s\right), \quad G(0;s)=G(1;s)=0.
+\]
+Compute by hand the solution to the above problem: $G(x;s)$. This is known as
+the \textbf{Green's function}.
+
+\item Let $a(x)\equiv1$. From the previous part, show that $G(x;s)=G(s;x)$.
+Using an approriate application of Green's formula, show that for a general load
+function, $f\in C^{0}(0,1)$, the solution to
+\[
+  \LL\left(u\right) = -u'' = f(x), \quad u(0)=u(1)=0
+\]
+is given by
+\[
+  u(x) = \int_{0}^{1} f(s)\,G(s;x)\,ds.
+\]
+
+\end{enumerate}
+
+% ================================================================
+\item Consider the following scalar product and the associated norm:
+\[
+  (v,\,w) := \int_{0}^{1} v(x)\,w(x)\,dx
+  \qquad\text{and}\qquad
+  \|v\| := \sqrt{(v,\,v)}.
+\]
+Prove Cauchy's inequality:
+\[
+  \left|\,(v,\,w)\,\right| \le \|v\|\|w\|.
+\]
+\textbf{HINT:} Construct the function: $P(t):=\|v-tw\|^{2}$, and show that $P$
+is a quadratic polynomial. Think about what you can say about the roots of $P$.
+
+\bigskip
+
+% ================================================================
+\item Consider the following boundary value problem with periodic boundary
+conditions:
+\begin{align*}
+  \textbf{ODE} &: \quad -\, u'' + q(x)\,u = f(x),\\
+  \textbf{BC1} &: \quad u(-\pi) = u(\pi),\\
+  \textbf{BC2} &: \quad u'(-\pi) = u'(\pi),
+\end{align*}
+where $q>0$ $\forall x\in[-\pi,\pi]$.
+
+\begin{enumerate}
+\item Recast this equation into a variational problem, stating the trial and
+test function spaces.
+
+\item Interpret the variational problem as an energy minimization problem,
+clearly stating the energy functional. Prove that the variational problem and
+the energy minimization problems are equivalent.
+\end{enumerate}
+
+\end{enumerate}
+
+\end{document}

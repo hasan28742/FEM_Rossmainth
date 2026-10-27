@@ -1,0 +1,208 @@
+\lecture{A priori error estimates: energy norm and $L^2$}{Lecture 7 --- Wednesday, September 9, 2026}{Math 6660 --- \texttt{7th.pdf}}
+
+\begin{roadmap}[Lecture 7]
+\roadq{What convergence rate, exactly?}
+\begin{roadlist}
+\item \textbf{Energy norm:} $O(h)$ for CG(1), and the constant is driven by
+  $u''$ --- curvature of the true solution. Flat solution, small error.
+\item \textbf{$L^{2}$ norm:} $O(h^{2})$, one order better. The extra order is
+  not free --- it comes from a duality argument, not from the same estimate.
+\item The working tool throughout is the \textbf{interpolant} $\Pi_h u$:
+  compare the FEM answer to it, never directly to $u$.
+\end{roadlist}
+\payoff{Reading the slope on a log--log convergence plot and telling whether
+your element is behaving or you have a bug.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Setup}
+
+\begin{equation}\label{eq:l7setup}
+  -(au')'=f \ \text{ in } (0,1),\qquad u(0)=u(1)=0,
+\end{equation}
+\begin{equation}\label{eq:l7V}
+  \Vsp=\Bigl\{v:\textstyle\int_0^1\bigl[v^2+(v')^2\bigr]\dx<\infty,\ v(0)=v(1)=0\Bigr\},
+  \qquad \Vh \ \text{ for CG(1)}.
+\end{equation}
+
+% ==================================================================
+\subsection*{(1) Energy norm}
+
+\begin{equation}\label{eq:l7enorm}
+  \norm{e}_{E}^{2}=\int_0^1 a\bigl[(u-U)'\bigr]^{2}\dx .
+\end{equation}
+Last time it was shown that the FEM solution satisfies
+\begin{equation}\label{eq:l7cea}
+  \norm{u-U}_{E}\;\le\;\norm{u-v}_{E}
+  \qquad\forall\,v\in\Vh
+  \quad\text{(any other function in } \Vh).
+\end{equation}
+
+Now take the test function
+\begin{equation}\label{eq:l7interp}
+  v=\Pi_h u\in\Vh,
+  \qquad
+  \Pi_h u=\sum_{j=1}^{M} u(x_j)\,\phih_j(x),
+\end{equation}
+the projection of $u\in\Vsp$ into the subspace $\Vh\subset\Vsp$: interpolate
+$u(x)$ onto the mesh using piecewise linear (continuous) functions.
+
+\todoq{Page 2 writes the sum as $\sum_{j=1}^{M}u(x_i)\phih_i(x)$ --- the index
+under the sum is $j$ but the terms carry $i$. Transcribed with $j$ throughout.
+The word before ``functions'' is hard to read; from context it must be
+\emph{linear}, not \emph{Green}.}
+
+\begin{intuition}[what $\Pi_h u$ is, and why it is the right test function]
+$\Pi_h u$ is the piecewise-linear function that \emph{agrees with $u$ at every
+node} --- connect the dots of the exact solution with straight lines. It is
+computable in principle and, crucially, it is a legal member of $\Vh$.
+
+Why feed it into \eqref{eq:l7cea}: that inequality holds for \emph{every}
+$v\in\Vh$, so it holds for the one we can estimate. C\'ea says $U$ is at least
+as good as $\Pi_h u$, so bounding how badly a straight line approximates $u$ on
+one element bounds the entire FE error. The solver never enters.
+\end{intuition}
+
+\medskip\noindent\textbf{Note.}
+\begin{equation}\label{eq:l7interperr}
+  \norm{u-\Pi_h u}_{E}=\norm{(u-\Pi_h u)'}_{a}\le C\,\norm{h\,u''}_{a},
+\end{equation}
+which just comes from approximating $u'$ by a piecewise constant function; $C$
+is a constant that depends only on $a(x)$.
+
+\begin{theorem}\label{thm:l7apriori}
+The FEM approximation $U\in\Vh$ satisfies $\norm{u-U}_{E}\le\norm{u-v}_{E}$ for
+all $v\in\Vh\subset\Vsp$. In particular there exists a constant $C$, depending
+only on $a(x)$, such that
+\begin{equation}\label{eq:l7thm}
+  \boxed{\ \norm{u-U}_{E}\le C\,\norm{h\,u''}_{a}\ }
+\end{equation}
+\end{theorem}
+
+\medskip\noindent\textbf{Note.} This shows that CG(1) is \emph{first order
+accurate in the energy norm}, provided $u''\in L^{2}(0,1)$.
+
+\begin{mechanics}[what first order buys you]
+Halve the mesh, halve the energy-norm error. And the energy norm weights
+\emph{strain}, so \eqref{eq:l7thm} is a statement about stress accuracy.
+
+Note the proviso: $u''\in L^{2}$. At a re-entrant corner or a point load $u''$
+is not square integrable, the right-hand side is infinite, and the estimate
+says nothing --- which is exactly the case where uniform refinement stalls.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{(2) $L^{2}(0,1)$ norm}
+
+For the same problem \eqref{eq:l7setup}, consider the following
+\textbf{dual problem}:
+\begin{equation}\label{eq:l7dual}
+  -(a\phi')'=e,\qquad \phi(0)=\phi(1)=0,
+  \qquad\text{where } e=u-U .
+\end{equation}
+
+\medskip\noindent\textbf{Note.} Because the original 2-pt BVP is self-adjoint,
+the primal and dual operators are the same.
+
+\begin{intuition}[the dual problem, and why self-adjointness matters]
+The dual problem is an auxiliary BVP whose \emph{load is the error itself}.
+Solve it and you obtain a $\phi$ engineered so that pairing it against $e$
+reproduces $\norm{e}^{2}$ --- which is the whole trick below.
+
+Self-adjointness (Lecture 1's Green's formula) is what makes the dual operator
+identical to the primal one. For a non-self-adjoint problem you would have to
+solve a genuinely different equation here.
+\end{intuition}
+
+\paragraph{$L^{2}$-norm.} Multiply \eqref{eq:l7dual} by $e$ and integrate:
+\begin{align}
+  \norm{e}^{2}
+   &= \int_0^1 e^{2}\dx
+    = -\int_0^1 e\,(a\phi')'\dx \notag\\
+   &= \int_0^1 a\,e'\phi'\dx - \Bigl[a\,e\,\phi'\Bigr]_0^1 ,
+   \label{eq:l7ibp}
+\end{align}
+and the boundary term vanishes because $e(0)=e(1)=0$, so
+\begin{equation}\label{eq:l7esq}
+  \norm{e}^{2}=\int_0^1 a\,e'\phi'\dx .
+\end{equation}
+
+\medskip\noindent
+\textbf{Recall Galerkin orthogonality:}
+$\int_0^1 a\,e'v'\dx=0$ for all $v\in\Vh$. Take $v=\Pi_h\phi$:
+\begin{equation}\label{eq:l7GO}
+  \norm{e}^{2}
+   = \int_0^1 a\,e'\phi'\dx-\int_0^1 a\,e'\,(\Pi_h\phi)'\dx
+   = \int_0^1 a\,e'\,(\phi-\Pi_h\phi)'\dx .
+\end{equation}
+
+\begin{intuition}[subtracting zero is the whole move]
+$\int a\,e'(\Pi_h\phi)'\dx$ is zero by Galerkin orthogonality, so
+\eqref{eq:l7GO} subtracts nothing. But it converts $\phi'$ into the
+\emph{interpolation error} $(\phi-\Pi_h\phi)'$, which is small --- order $h$ ---
+whereas $\phi'$ itself is not small at all. That single substitution is what
+buys the extra power of $h$.
+\end{intuition}
+
+\paragraph{Cauchy's inequality.}
+\begin{align}
+  \norm{e}^{2} &\le \norm{e'}_{a}\,\norm{(\phi-\Pi_h\phi)'}_{a}
+   \label{eq:l7cauchy}\\
+  \norm{e}^{2} &\le C_{I}\,h_{\max}\,\norm{e'}_{a}\,
+                    \underbrace{\norm{\phi''}_{a}}_{\text{interpolation error}}
+   \label{eq:l7cauchy2}
+\end{align}
+But recall, from part (1),
+\begin{equation}\label{eq:l7recall}
+  \norm{e'}_{a}=\norm{e}_{E}\le C_{I}\,h_{\max}\,\norm{u''}_{a},
+\end{equation}
+so
+\begin{equation}\label{eq:l7chain}
+  \norm{e}^{2}\le C_{I}^{2}\,h_{\max}^{2}\,\norm{u''}_{a}\,\norm{\phi''}_{a}
+  = C_{I}^{2}\,h_{\max}^{2}\,\norm{u''}_{a}\,
+    \frac{\norm{\phi''}_{a}}{\norm{e}}\,\norm{e},
+\end{equation}
+and dividing by $\norm{e}$,
+\begin{equation}\label{eq:l7L2}
+  \norm{e}\le C_{I}^{2}\,h_{\max}^{2}\,\norm{u''}_{a}\,
+              \frac{\norm{\phi''}_{a}}{\norm{e}} .
+\end{equation}
+Let
+\begin{equation}\label{eq:l7Sa}
+  S_{a}=\max_{\xi\neq0}\frac{\norm{\psi''}_{a}}{\norm{\xi}},
+  \qquad\text{where}\qquad
+  -(a\psi')'=\xi,\quad \psi(0)=\psi(1)=0 .
+\end{equation}
+
+\medskip\noindent\textbf{Note.} If $a\equiv$ constant, then
+$-(a\psi')'=-a\psi''=\xi$, so
+\begin{equation}\label{eq:l7const}
+  \frac{\psi''}{\norm{\xi}}=\frac{1}{a}.
+\end{equation}
+
+\todoq{Two things to check here. (i) The last line divides a \emph{function}
+$\psi''$ by a \emph{number} $\norm{\xi}$; it should presumably read
+$\norm{\psi''}/\norm{\xi}=1/a$, and the sign from $\psi''=-\xi/a$ has been
+dropped. (ii) That $1/a$ comes out only if the numerator is the plain $L^2$
+norm, not the $a$-weighted $\norm{\cdot}_a$ used in \eqref{eq:l7Sa} --- with the
+weighted norm one gets $1/\sqrt{a}$. Ask which norm is meant in $S_a$.}
+
+\begin{intuition}[the payoff: $L^2$ converges one order faster]
+Combining \eqref{eq:l7L2} with \eqref{eq:l7Sa} gives
+$\norm{e}\le C_{I}^{2}h_{\max}^{2}S_{a}\norm{u''}_{a}$ --- \textbf{second}
+order in $h$, against first order for the energy norm \eqref{eq:l7thm}.
+
+Where the extra power came from: interpolation error was used \emph{twice} ---
+once on $e$ through \eqref{eq:l7recall}, once on $\phi$ through
+\eqref{eq:l7GO}. Each contributes one factor of $h$. This is the duality
+(Aubin--Nitsche) argument.
+
+Engineering reading: \textbf{displacements converge faster than stresses}. The
+energy norm measures strain error and gives $O(h)$; the $L^2$ norm measures
+displacement error and gives $O(h^2)$. That is why a displacement plot can look
+converged while the stress plot is still visibly wrong.
+\end{intuition}
+
+\todoq{The notes stop at \eqref{eq:l7const} without writing the final $L^2$
+estimate explicitly. Confirm the intended statement is
+$\norm{e}\le C_I^{2}h_{\max}^{2}S_a\norm{u''}_a$.}

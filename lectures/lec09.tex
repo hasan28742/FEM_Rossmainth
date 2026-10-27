@@ -1,0 +1,110 @@
+\lecture{A posteriori error and adaptive refinement}{Lecture 9 --- Monday, September 14, 2026}{Math 6660 --- \texttt{9th.pdf}}
+
+\begin{roadmap}[Lecture 9]
+\roadq{How does a solver decide \emph{where} to refine?}
+\begin{roadlist}
+\item The \textbf{residual} $R(U)=f+(aU')'$ measures how badly the computed $U$
+  fails the strong equation inside each element. It does \emph{not} shrink under
+  refinement --- it stays $O(1)$.
+\item What shrinks is its weighted contribution: the element indicator
+  $E_j^{2}$ multiplies the residual by the element size squared.
+\item \textbf{Equidistribution}: split the global error budget evenly over the
+  elements and refine anything carrying more than its share. Repeat.
+\end{roadlist}
+\payoff{This is literally the adaptive mesh refinement loop in a commercial
+solver, and $E_j$ is the per-element indicator it colours on the screen.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Error analysis: where we are}
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{a priori} & \textcircled{\scriptsize1} energy norm \quad
+                    \textcircled{\scriptsize2} $L^{2}$ norm\\
+\textbf{a posteriori} & \textcircled{\scriptsize1} energy norm\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ==================================================================
+\subsection*{A posteriori error, energy norm}
+
+\begin{equation}\label{eq:l9enorm}
+  \norm{e}_{E}^{2}=\int_0^1 a\,e'e'\dx ,
+\end{equation}
+and from the FEM (Lecture 8),
+\begin{equation}\label{eq:l9fem}
+  \norm{e}_{E}^{2}
+   =\int_0^1 f\,\bigl(e-\Pi_h e\bigr)\dx
+   -\int_0^1 a\,U'\bigl(e-\Pi_h e\bigr)'\dx .
+\end{equation}
+But from interpolation,
+\begin{equation}\label{eq:l9interp}
+  \underbrace{\norm{h^{-1}\bigl(e-\Pi_h e\bigr)}_{a}}_{O(h^{2})}
+  \;\le\;C\,\underbrace{\norm{e'}_{a}}_{O(h)} .
+\end{equation}
+
+\medskip\noindent\textbf{Note.} Roughly speaking $R(U)=O(1)$.
+
+\begin{intuition}[why the residual does not shrink]
+$R(U)$ is the amount by which the computed $U$ fails to satisfy the strong
+equation pointwise. It stays $O(1)$ under refinement --- it does not go to zero.
+What goes to zero is its \emph{weighted} contribution, because it gets
+multiplied by the interpolation error. The estimator is small not because the
+residual is small, but because the residual is paired against something small.
+\end{intuition}
+
+% ==================================================================
+\subsection*{In practice: the adaptive algorithm}
+
+\begin{enumerate}[label=\textcircled{\scriptsize\arabic*},leftmargin=2.2em,itemsep=5pt]
+
+\item On some initial coarse mesh, compute the FEM solution.
+
+\item Calculate on each element the residual
+\begin{equation}\label{eq:l9Ej}
+  E_{j}^{2}=\bigl(x_{j}-x_{j-1}\bigr)^{2}
+            \int_{x_{j-1}}^{x_{j}}\frac{1}{a(x)}\,R^{2}(U)\dx ,
+  \qquad\text{where}\qquad
+  R(U)=f+\bigl(aU'\bigr)' .
+\end{equation}
+We want
+\begin{equation}\label{eq:l9target}
+  E^{2}=\sum_{j=1}^{M+1}E_{j}^{2}\;\le\;\frac{\epsilon^{2}}{c^{2}} ,
+\end{equation}
+which is achieved if each element satisfies
+\begin{equation}\label{eq:l9perelem}
+  E_{j}^{2}\;\le\;\frac{\epsilon^{2}}{c^{2}(M+1)} .
+\end{equation}
+
+\item Recalculate the solution on the new mesh, then repeat
+\textcircled{\scriptsize2} $+$ \textcircled{\scriptsize3}.
+
+\end{enumerate}
+
+\begin{intuition}[equidistribution]
+\eqref{eq:l9perelem} splits the global budget $\epsilon^{2}/c^{2}$ evenly over
+the $M+1$ elements. An element carrying more than its share gets refined; one
+carrying less is left alone. The converged mesh has roughly \emph{equal error
+per element} --- which is why adaptive meshes come out fine near a corner or a
+load and coarse in the quiet regions, without anyone specifying that by hand.
+
+Note also the factor $(x_j-x_{j-1})^2$ in \eqref{eq:l9Ej}: halving an element
+cuts its indicator by four even at fixed residual, so refinement pays.
+\end{intuition}
+
+\begin{mechanics}
+This is what a commercial solver's adaptive mesh refinement does. $R(U)$ is the
+equilibrium residual --- how badly the computed stress field fails to balance
+the applied load inside each element --- and $E_j$ is the per-element error
+indicator you see coloured on the screen before remeshing.
+\end{mechanics}
+
+\todoq{The notes write $\norm{h^{-1}(e-\Pi_h e)}_a \le C\norm{e'}_a$ with
+$O(h^2)$ under the left side and $O(h)$ under the right. With the $h^{-1}$
+factor in front the left side should be $O(h)$, matching the right; the
+$O(h^{2})$ presumably labels $e-\Pi_h e$ alone, before dividing by $h$. Check
+which grouping was meant.}

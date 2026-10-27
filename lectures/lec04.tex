@@ -1,0 +1,311 @@
+\lecture{The discrete system: stiffness matrix and load vector}{Lecture 4 --- Monday, August 31, 2026}{Math 6660 --- OneNote export \texttt{4th.pdf}}
+
+\begin{roadmap}[Lecture 4]
+\roadq{How does an integral identity become $\Kmat\Uvec=\Fvec$?}
+\begin{roadlist}
+\item Substitute the hat basis into the weak form. The bilinear form evaluated
+  on two basis functions \emph{is} the stiffness entry $K_{ij}$; the load
+  functional \emph{is} $F_i$. There is nothing else in assembly.
+\item \textbf{Galerkin orthogonality}: the error is orthogonal, in the energy
+  inner product, to everything the mesh can represent. So the FEM answer is the
+  \emph{best} member of $\Vh$, not just some member.
+\item For $a\equiv1$ on a uniform mesh, $\Kmat$ comes out as the classical
+  central-difference stencil --- same matrix, different reasoning.
+\end{roadlist}
+\payoff{Reading assembly code, and knowing why refining a mesh can never make
+the energy-norm error worse.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Setup}
+
+\paragraph{2-pt BVP.} $-(au')'=f$ on $(0,1)$, $u(0)=u(1)=0$.
+\[
+  \Big\Downarrow\ \text{variational problem}
+\]
+Find $u\in V$ such that
+\begin{equation}\label{eq:var4}
+  \int_{0}^{1} a\,u'v'\dx=\int_{0}^{1} f v\dx \qquad\forall\,v\in V,
+\end{equation}
+where $V=\bigl\{v:\int_{0}^{1}v^{2}\dx<\infty,\ \int_{0}^{1}(v')^{2}\dx<\infty,\ v(0)=v(1)=0\bigr\}$.
+
+\paragraph{Mesh $\Th$.} Grid points
+\[
+  x_{0}=0,\ x_{1},\ x_{2},\ \dots,\ x_{M},\ x_{M+1}=1 .
+\]
+
+\paragraph{FEM space.}
+\begin{equation}\label{eq:Vh4}
+  \Vh \defeq \Bigl\{\, v\in V \;:\; v\big|_{[x_{i},x_{i+1}]}
+  \in \text{polynomial of degree }1,\ \ \forall\, i=0,\dots,M \,\Bigr\}
+\end{equation}
+
+\paragraph{FEM.} Find $U\in\Vh\subset V$ such that
+\begin{equation}\label{eq:fem4}
+  \int_{0}^{1} a\,U'v'\dx=\int_{0}^{1} f v\dx \qquad\forall\,v\in\Vh .
+\end{equation}
+
+\begin{intuition}[the FEM problem is the variational problem with $V$ swapped for $\Vh$]
+Compare the two lines: identical, except $V\to\Vh$. Nothing else changed --- not
+the equation, not the bilinear form, not the load. \textbf{That single
+substitution is the entire finite element method.}
+
+This is the second arrow of Lecture 3's chain, and it is where approximation
+finally enters. The first arrow (strong $\to$ weak) cost nothing.
+\end{intuition}
+
+% ==================================================================
+\subsection*{A basis for $\Vh$}
+
+$\phih_{1}(x),\phih_{2}(x),\dots,\phih_{M}(x)$, where
+\begin{equation}\label{eq:hat4}
+  \phih_{j}(x)=\begin{cases}
+    \dfrac{x-x_{j-1}}{h_{j}}, & x_{j-1}<x<x_{j},\\[10pt]
+    \dfrac{x_{j+1}-x}{h_{j+1}}, & x_{j}<x<x_{j+1},
+  \end{cases}
+\end{equation}
+\begin{equation}
+  \Vh=\operatorname{span}\{\phih_{1},\phih_{2},\dots,\phih_{M}\},
+  \qquad \dim\Vh=M .
+\end{equation}
+If $U\in\Vh$ then
+\begin{equation}\label{eq:Uexp}
+  U(x)=\sum_{j=1}^{M}\xi_{j}\,\phih_{j}(x),
+  \qquad\text{where}\qquad
+  \xi_{j}=U(x_{j}),\quad j=1,\dots,M .
+\end{equation}
+
+\todoq{Page 2 writes the second branch of \eqref{eq:hat4} as
+$(x_{j+1}-x_{j})/h_{j+1}$. That numerator is just $h_{j+1}$, so the branch would
+be the constant $1$ --- not a hat. It must be $(x_{j+1}-x)/h_{j+1}$, which is
+what Lecture 3 had. Transcribed corrected.}
+
+\begin{mechanics}[$\xi_{j}$ is the displacement of node $j$]
+$\xi_{j}=U(x_{j})$ is stated outright here, and it is the property that makes
+the method usable: the unknowns you solve for \emph{are} the nodal
+displacements, not abstract coefficients. It follows from
+$\phih_{j}(x_{i})=\delta_{ij}$.
+
+$\dim\Vh=M$ counts \emph{interior} nodes only --- $\phih_{0}$ and $\phih_{M+1}$
+are absent from the basis, which is how $U(0)=U(1)=0$ is enforced. In solver
+terms: the fixed DOFs were eliminated, not penalised.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{Galerkin orthogonality}
+
+\begin{align}
+  \int_{0}^{1}a\,u'v'\dx &= \int_{0}^{1}fv\dx, & u,v&\in V, \label{eq:go-a}\\
+  \int_{0}^{1}a\,U'v'\dx &= \int_{0}^{1}fv\dx, & U,v&\in\Vh. \label{eq:go-b}
+\end{align}
+Subtract. Since $\Vh\subset V$, \eqref{eq:go-a} also holds for $v\in\Vh$:
+\begin{equation}\label{eq:go4}
+  \boxed{\;\int_{0}^{1} a\,(u-U)'\,v'\dx = 0 \qquad\text{for all } v\in\Vh\;}
+\end{equation}
+
+\begin{intuition}[the error is invisible to the mesh]
+$a(\cdot,\cdot)$ is symmetric and positive definite, so it is an \emph{inner
+product} --- the energy inner product. Read \eqref{eq:go4} in that language:
+\[
+  \bigl\langle\, u-U,\ v \,\bigr\rangle_{a} = 0 \qquad \forall\, v\in\Vh
+  \qquad\Longleftrightarrow\qquad
+  (u-U) \perp \Vh .
+\]
+So $U$ is the \textbf{orthogonal projection} of $u$ onto $\Vh$ --- the closest
+point in $\Vh$ to $u$, measured in energy. Not merely a good approximation:
+\emph{the best one the mesh can hold}.
+
+Pythagoras then gives
+$\Enorm{u}^{2}=\Enorm{U}^{2}+\Enorm{u-U}^{2}$, hence $\Enorm{U}\le\Enorm{u}$:
+the discrete solution stores \emph{less} energy than the true one.
+\textbf{A conforming displacement-based FE model is too stiff}, and refining
+softens it monotonically toward the truth. That is the theorem behind the rule
+of thumb.
+
+Note where $\Vh\subset V$ was used: without it, \eqref{eq:go-a} could not be
+tested against $v\in\Vh$ and the subtraction would be illegal. Conformity is
+not decoration.
+\end{intuition}
+
+% ==================================================================
+\subsection*{The linear system}
+
+Put \eqref{eq:Uexp} into \eqref{eq:fem4} and take $v=\phih_{i}$,
+$i=1,\dots,M$:
+\begin{equation}
+  \int_{0}^{1} a\Bigl(\sum_{j=1}^{M}\xi_{j}\phih_{j}\Bigr)'\phih_{i}'\dx
+  = \int_{0}^{1} f\,\phih_{i}\dx
+  \quad\Longrightarrow\quad
+  \sum_{j=1}^{M}\xi_{j}\int_{0}^{1} a\,\phih_{i}'\phih_{j}'\dx
+  = \int_{0}^{1} f\,\phih_{i}\dx .
+\end{equation}
+This is an $M\times M$ linear system:
+\begin{equation}\label{eq:system}
+  \boxed{\;\Kmat\,\bm{\xi}=\bm{b}\;}
+  \qquad
+  K_{ij}=\int_{0}^{1} a\,\phih_{i}'\,\phih_{j}'\dx,
+  \qquad
+  b_{i}=\int_{0}^{1} f\,\phih_{i}\dx,
+\end{equation}
+with $\bm{\xi}=(\xi_{1},\xi_{2},\dots,\xi_{M})^{T}$.
+
+\begin{mechanics}[this is the stiffness matrix, literally]
+The lecturer calls $\Kmat$ the \textbf{stiffness matrix} and lists three
+properties. Each is a fact you already use:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lll@{}}
+\toprule
+ & \textbf{lecture} & \textbf{you call it}\\
+\midrule
+(1) & symmetric: test and trial from the same space & $\Kmat=\Kmat^{T}$, Betti reciprocity\\
+(2) & positive definite: $a>0$                       & no rigid-body modes; $\Kmat$ invertible\\
+(3) & tridiagonal: compact support $[x_{i-1},x_{i+1}]$ & banded/sparse $\Kmat$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+(1) holds because $a(u,v)=a(v,u)$ --- the same self-adjointness proved in
+Lecture 1. Break it (add advection) and $\Kmat$ stops being symmetric.
+(3) is purely geometric: $\phih_{i}$ lives only on $[x_{i-1},x_{i+1}]$, so
+\[
+  \int_{0}^{1} a\,\phih_{i}'\phih_{j}'\dx \ne 0
+  \qquad\text{only for } j=i-1,\ i,\ i+1 .
+\]
+\end{mechanics}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.0, every node/.style={font=\small}]
+  \draw[->,gray!70] (-0.4,0) -- (8.6,0) node[right,font=\scriptsize,black] {$x$};
+  % overlap shading
+  \fill[PitBack] (4,0) -- (5.4,0.95) -- (5.4,0) -- cycle;
+  \fill[PitBack] (4,0) -- (5.4,0.95) -- (4,0.95) -- cycle;
+  \fill[PitBack] (4,0) rectangle (5.4,0.0);
+  \begin{scope}
+    \clip (4,0) rectangle (5.4,1.1);
+    \fill[PitBack] (2.6,0) -- (4,0.95) -- (5.4,0) -- cycle;
+    \fill[PitBack] (4,0) -- (5.4,0.95) -- (6.8,0) -- cycle;
+  \end{scope}
+  % hats
+  \draw[very thick,IntFrame] (2.6,0) -- (4,0.95) -- (5.4,0);
+  \draw[very thick,MEFrame]  (4,0)   -- (5.4,0.95) -- (6.8,0);
+  \node[IntFrame,above,font=\scriptsize] at (4,1.0)   {$\phih_{i}$};
+  \node[MEFrame,above,font=\scriptsize]  at (5.4,1.0) {$\phih_{i+1}$};
+  \foreach \x/\l in {1.2/{x_{i-2}}, 2.6/{x_{i-1}}, 4/{x_{i}}, 5.4/{x_{i+1}}, 6.8/{x_{i+2}}}{
+    \draw (\x,-0.09) -- (\x,0.09);
+    \node[below,font=\scriptsize] at (\x,-0.11) {$\l$};}
+  \draw[decorate,decoration={brace,amplitude=3.5pt,mirror},thin,PitFrame]
+        (4,-0.62) -- (5.4,-0.62);
+  \node[below,font=\scriptsize,PitFrame,align=center] at (4.7,-0.78)
+       {they overlap here\\ $\Rightarrow K_{i,i+1}\ne0$};
+  \node[font=\scriptsize,align=left,MEFrame] at (1.3,0.75)
+       {no overlap with $\phih_{i}$\\ $\Rightarrow K=0$ for $\abs{i-j}>1$};
+\end{tikzpicture}
+\caption{Adjacent hats overlap on one element, so only $j=i-1,i,i+1$ give a
+nonzero entry. Sparsity is a consequence of small support, nothing more.}
+\label{fig:overlap}
+\end{figure}
+
+% ==================================================================
+\subsection*{Worked example: $a\equiv1$, uniform mesh $h_{j}\equiv h$}
+
+\paragraph{Diagonal.} $\phih_{i}'=+1/h$ on $(x_{i-1},x_{i})$ and $-1/h$ on
+$(x_{i},x_{i+1})$, so $(\phih_{i}')^{2}=1/h^{2}$ on both:
+\begin{align}
+  K_{ii} &= \int_{0}^{1} 1\cdot\phih_{i}'\phih_{i}'\dx
+        = \int_{x_{i-1}}^{x_{i}}(\phih_{i}')^{2}\dx
+        + \int_{x_{i}}^{x_{i+1}}(\phih_{i}')^{2}\dx \notag\\
+        &= \frac{1}{h^{2}}(x_{i}-x_{i-1}) + \frac{1}{h^{2}}(x_{i+1}-x_{i})
+        = \frac{1}{h}+\frac{1}{h} = \frac{2}{h}.
+\end{align}
+
+\paragraph{Off-diagonal.} On $(x_{i},x_{i+1})$: $\phih_{i}'=-1/h$ while
+$\phih_{i+1}'=+1/h$, so the product is $-1/h^{2}$ over a length $h$:
+\begin{equation}
+  K_{i,i+1}=\int_{x_{i}}^{x_{i+1}}\phih_{i}'\,\phih_{i+1}'\dx
+  = -\frac{1}{h^{2}}\cdot h = -\frac{1}{h}.
+\end{equation}
+
+\paragraph{Load vector.} By the composite trapezoidal rule on
+$[x_{i-1},x_{i+1}]$, using $\phih_{i}(x_{i\pm1})=0$ and $\phih_{i}(x_{i})=1$:
+\begin{equation}
+  b_{i}=\int_{x_{i-1}}^{x_{i+1}} f\,\phih_{i}\dx
+  \approx \frac{h}{2}\Bigl[f(x_{i-1})\underbrace{\phih_{i}(x_{i-1})}_{0}
+  + 2f(x_{i})\underbrace{\phih_{i}(x_{i})}_{1}
+  + f(x_{i+1})\underbrace{\phih_{i}(x_{i+1})}_{0}\Bigr]
+  = h\,f(x_{i}).
+\end{equation}
+
+\paragraph{Result.}
+\begin{equation}\label{eq:tridiag}
+  \Kmat=\frac{1}{h}
+  \begin{bmatrix}
+     2 & -1 &    &    &   \\
+    -1 &  2 & -1 &    &   \\
+       & -1 &  2 & -1 &   \\
+       &    & \ddots & \ddots & \ddots\\
+       &    &    & -1 &  2
+  \end{bmatrix},
+  \qquad
+  \bm{b}=h\bigl(f(x_{1}),f(x_{2}),\dots,f(x_{M})\bigr)^{T}.
+\end{equation}
+
+\begin{mechanics}[this is your assembled bar stiffness]
+Take the 2-node bar element of length $h$ with $EA=a=1$. Its element stiffness
+is the one you derive by hand:
+\[
+  \bm{k}^{e}=\frac{EA}{h}\begin{bmatrix}1&-1\\-1&1\end{bmatrix}
+  =\frac{1}{h}\begin{bmatrix}1&-1\\-1&1\end{bmatrix}.
+\]
+Assemble: node $i$ is shared by elements $(i{-}1,i)$ and $(i,i{+}1)$, so it
+collects $\tfrac1h+\tfrac1h=\tfrac2h$ on the diagonal, and $-\tfrac1h$ from the
+single shared element off-diagonal. That is exactly \eqref{eq:tridiag}.
+
+\textbf{So the lecturer's $\Kmat$ and your assembled bar stiffness are the same
+matrix} --- derived from a variational principle here, from equilibrium of
+springs in a mechanics course. And $\bm{b}=h f(x_{i})$ is the consistent load
+vector, which trapezoidal quadrature has turned into the \emph{lumped} one.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{Note: this is exactly the central finite difference method}
+
+\noindent\textbf{FDM will provide the same matrix as FEM for the 2-pt BVP.} Row
+$i$ of \eqref{eq:tridiag} reads
+\begin{equation}
+  \frac{1}{h}\bigl(-\xi_{i-1}+2\xi_{i}-\xi_{i+1}\bigr) = h\,f(x_{i})
+  \qquad\Longleftrightarrow\qquad
+  \frac{-\xi_{i-1}+2\xi_{i}-\xi_{i+1}}{h^{2}} = f(x_{i}),
+\end{equation}
+which is the $O(h^{2})$ central difference approximation of $-u''=f$.
+
+\todoq{Page 6 reads ``FDM will also provide the same \emph{Mathematic}\dots'' ---
+I think this is ``the same \emph{matrix}''. Confirm.}
+
+\begin{pitfall}[same matrix here, different methods in general]
+The two coincide only because of a stack of special choices: $a\equiv1$, a
+\emph{uniform} mesh, linear elements, and trapezoidal quadrature for $\bm b$.
+Change any one and they part company:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{change} & \textbf{consequence}\\
+\midrule
+non-uniform $h_{j}$      & FEM handles it directly; FDM needs a new stencil\\
+variable $a(x)$          & FEM integrates $a$ exactly; FDM must average it\\
+exact quadrature for $\bm b$ & $\bm b\ne h f(x_{i})$ --- the systems differ\\
+2D/3D, unstructured mesh & FDM has no counterpart\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+And they were \emph{derived} differently even here: FDM discretises the
+\emph{equation}, FEM discretises the \emph{space}. That distinction --- the
+first sentence of Lecture 1 --- is why FEM keeps working when the mesh stops
+being a grid. Agreement on this one problem is a coincidence worth noticing,
+not a general fact.
+\end{pitfall}

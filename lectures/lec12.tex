@@ -1,0 +1,271 @@
+\lecture{CG(3) assembly: the Hermite stiffness matrix}{Lecture 12 --- Wednesday, September 23, 2026}{Math 6660 --- \texttt{12th.pdf}}
+
+\noindent{\small\itshape Lecture 12 re-states the beam problem from
+Lecture 11 and then carries the CG(3) discretisation all the way to the
+assembled linear system. Pages 7--9 of \texttt{missing.pdf} cover the same
+material; the two sources agree throughout, and the transcription below follows
+my own notes.}
+
+\begin{roadmap}[Lecture 12]
+\roadq{What does the beam stiffness matrix actually look like once assembled?}
+\begin{roadlist}
+\item Two kinds of unknown per node (a value, a slope) means every matrix entry
+  is one of four pairings. The matrix splits into blocks: $\bm{A}$
+  deflection--deflection, $\bm{B}$ rotation--rotation, $\bm{C}$ the coupling.
+\item $\bm{C}$ is \emph{anti}-symmetric --- and the assembled $\bm{S}$ is still
+  symmetric. Worth understanding rather than memorising.
+\item The load side now needs \textbf{two} vectors: a distributed load lumps
+  into nodal forces \emph{and} nodal moments.
+\item The numbers that come out --- $12/h^{3}$, $6/h^{2}$, $4/h$, $2/h$ --- are
+  the textbook Euler--Bernoulli element matrix with $EI=1$.
+\end{roadlist}
+\payoff{Recognising the beam element you already know, written in the
+mathematics department's notation.}
+\end{roadmap}
+
+% ==================================================================
+\subsection*{Recap: the beam problem and its CG(3) space}
+
+\begin{equation}\label{eq:l12beam}
+  \left\{
+  \begin{aligned}
+    u^{(iv)}&=f &&\text{in }(0,1),\\
+    u(0)=u(1)&=u'(0)=u'(1)=0 ,
+  \end{aligned}\right.
+\end{equation}
+\begin{equation}\label{eq:l12V}
+  \Vsp=\Bigl\{v:\ \int_0^1\bigl[v^{2}+(v')^{2}+(v'')^{2}\bigr]\dx<\infty,\ \
+  v(0)=v(1)=v'(0)=v'(1)=0\Bigr\}.
+\end{equation}
+Functions in $\Vsp$ are $C^{1}$. Find $u\in\Vsp$ such that
+\begin{equation}\label{eq:l12weak}
+  \int_0^1 u''v''\dx=\int_0^1 f v\dx\qquad\forall\,v\in\Vsp .
+\end{equation}
+
+\medskip\noindent
+\textbf{FEM:} $\Vh\subset\Vsp$, spanned by the two Hermite shapes per node ---
+$\phih_{j}^{(1)}$, which carries the nodal value, and $\phih_{j}^{(2)}$, which
+carries the nodal slope (Lecture 11, \eqref{eq:l11phi1}--\eqref{eq:l11phi2}):
+\begin{equation}\label{eq:l12span}
+  \Vh=\operatorname{span}\bigl\{\phih_{1}^{(1)},\dots,\phih_{M}^{(1)},\
+      \phih_{1}^{(2)},\dots,\phih_{M}^{(2)}\bigr\},\qquad\dim\Vh=2M .
+\end{equation}
+\textbf{Trial functions:}
+\begin{equation}\label{eq:l12trial}
+  U=\sum_{j=1}^{M}\xi_{j}\,\phih_{j}^{(1)}(x)
+    +\sum_{j=1}^{M}\eta_{j}\,\phih_{j}^{(2)}(x).
+\end{equation}
+\textbf{Test functions:} $v=\phih_{1}^{(1)},\dots,\phih_{M}^{(1)},
+\phih_{1}^{(2)},\dots,\phih_{M}^{(2)}$.
+
+% ==================================================================
+\subsection*{The interpolant and its errors}
+
+If $u\in\Vsp$, then
+\begin{equation}\label{eq:l12PI}
+  \Pi_h u=\sum_{j=1}^{M}u(x_{j})\,\phih_{j}^{(1)}(x)
+          +\sum_{j=1}^{M}u'(x_{j})\,\phih_{j}^{(2)}(x),
+  \qquad\text{where }\Pi_h u\in\Vh .
+\end{equation}
+
+\medskip\noindent
+\textbf{Interpolation errors:}
+\begin{align}
+  \norm{u-\Pi_h u}_{\Ltwo[0,1]}     &\le c_{1}\norm{h^{4}u^{(4)}}_{\Ltwo[0,1]},
+     \label{eq:l12int0}\\
+  \norm{(u-\Pi_h u)'}_{\Ltwo[0,1]}  &\le c_{2}\norm{h^{3}u^{(4)}}_{\Ltwo[0,1]},
+     \label{eq:l12int1}\\
+  \norm{(u-\Pi_h u)''}_{\Ltwo[0,1]} &\le c_{3}\norm{h^{2}u^{(4)}}_{\Ltwo[0,1]}.
+     \label{eq:l12int2}
+\end{align}
+
+\begin{intuition}[why $u^{(4)}$, and why the exponents step down]
+The Hermite interpolant matches value and slope at both ends of every element,
+so it reproduces \emph{every cubic exactly}. The first thing it cannot
+reproduce is the fourth derivative --- which is why $u^{(4)}$, and nothing
+lower, sits on every right-hand side. Each derivative you take of the error
+costs one power of $h$: $h^{4}$ for the function, $h^{3}$ for the slope,
+$h^{2}$ for the curvature. Since the energy norm for the beam measures $v''$,
+\eqref{eq:l12int2} is the one that controls the FEM error, giving $O(h^{2})$.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Example: uniform mesh, $h_{j}=h$ for all $j$}
+
+With
+\begin{equation}\label{eq:l12fem}
+  \int_0^1 U''v''\dx=\int_0^1 f v\dx,
+  \qquad v=\phih_{1}^{(1)},\dots,\phih_{M}^{(1)},
+            \phih_{1}^{(2)},\dots,\phih_{M}^{(2)} ,
+\end{equation}
+the stiffness matrix comes out of four families of integrals. Testing against
+$\phih_{k}^{(1)}$, $k=1,2,\dots,M$:
+\begin{equation}\label{eq:l12rowa}
+  \int_0^1 U''v''\dx
+  =\sum_{j=1}^{M}\xi_{j}\int_0^1\bigl(\phih_{j}^{(1)}\bigr)''
+     \bigl(\phih_{k}^{(1)}\bigr)''\dx
+  +\sum_{j=1}^{M}\eta_{j}\int_0^1\bigl(\phih_{j}^{(2)}\bigr)''
+     \bigl(\phih_{k}^{(1)}\bigr)''\dx ,
+\end{equation}
+and then again, testing against $\phih_{k}^{(2)}$, $k=1,2,\dots,M$:
+\begin{equation}\label{eq:l12rowb}
+  \sum_{j=1}^{M}\xi_{j}\int_0^1\bigl(\phih_{j}^{(1)}\bigr)''
+     \bigl(\phih_{k}^{(2)}\bigr)''\dx
+  +\sum_{j=1}^{M}\eta_{j}\int_0^1\bigl(\phih_{j}^{(2)}\bigr)''
+     \bigl(\phih_{k}^{(2)}\bigr)''\dx .
+\end{equation}
+That is a block matrix
+\begin{equation}\label{eq:l12block}
+  \left[\begin{array}{c|c}
+    \bm{A} & \bm{C}\\\hline
+    -\bm{C} & \bm{B}
+  \end{array}\right]\in\R^{2M\times2M},
+  \qquad\text{here }\bm{A},\bm{B},\bm{C}\in\R^{M\times M}.
+\end{equation}
+
+\begin{intuition}[where the four blocks come from]
+There are two kinds of unknown ($\xi$, a value; $\eta$, a slope) and two kinds
+of test function, so every entry of the matrix is one of four pairings:
+value--value, value--slope, slope--value, slope--slope. $\bm{A}$ is the first,
+$\bm{B}$ the last, $\bm{C}$ the cross terms. Nothing about the physics changed
+--- it is still $\int u''v''$ --- only the bookkeeping, because each node now
+carries two numbers.
+\end{intuition}
+
+% ------------------------------------------------------------------
+\subsubsection*{The three blocks}
+
+\medskip\noindent
+Now,
+\begin{equation}\label{eq:l12Ajk}
+  A_{jk}=\int_0^1\bigl(\phih_{j}^{(1)}\bigr)''\bigl(\phih_{k}^{(1)}\bigr)''\dx,
+  \qquad
+  \bm{A}=\frac{12}{h^{3}}
+  \begin{bmatrix}
+    2 & -1 &        &    \\
+   -1 &  2 & \ddots &    \\
+      & \ddots & \ddots & -1\\
+      &    & -1 & 2
+  \end{bmatrix},
+\end{equation}
+which is $M\times M$, tridiagonal, symmetric.
+
+\begin{equation}\label{eq:l12Bjk}
+  B_{jk}=\int_0^1\bigl(\phih_{j}^{(2)}\bigr)''\bigl(\phih_{k}^{(2)}\bigr)''\dx,
+  \qquad
+  \bm{B}=\frac{2}{h}
+  \begin{bmatrix}
+    4 & 1 &        &   \\
+    1 & 4 & \ddots &   \\
+      & \ddots & \ddots & 1\\
+      &   & 1 & 4
+  \end{bmatrix},
+\end{equation}
+which is $M\times M$, tridiagonal, symmetric.
+
+\begin{equation}\label{eq:l12Cjk}
+  C_{jk}=\int_0^1\bigl(\phih_{j}^{(1)}\bigr)''\bigl(\phih_{k}^{(2)}\bigr)''\dx,
+  \qquad
+  \bm{C}=\frac{6}{h^{2}}
+  \begin{bmatrix}
+    0 & 1 &        &   \\
+   -1 & 0 & \ddots &   \\
+      & \ddots & \ddots & 1\\
+      &   & -1 & 0
+  \end{bmatrix},
+\end{equation}
+which is $M\times M$, tridiagonal --- but \emph{not} symmetric. It is
+anti-symmetric:
+\begin{equation}\label{eq:l12anti}
+  \bm{C}^{T}=-\bm{C}.
+\end{equation}
+Therefore
+\begin{equation}\label{eq:l12S}
+  \bm{S}=\left[\begin{array}{c|c}
+    \bm{A} & \bm{C}\\\hline
+    \bm{C}^{T} & \bm{B}
+  \end{array}\right],
+  \qquad \bm{S}^{T}=\bm{S},
+\end{equation}
+so $\bm{S}$ is $2M\times2M$ and symmetric.
+
+\begin{pitfall}[an anti-symmetric block does not break symmetry]
+$\bm{C}^{T}=-\bm{C}$ is exactly what makes $\bm{S}$ symmetric: the lower-left
+block \emph{is} $\bm{C}^{T}$, so writing it as $-\bm{C}$ in
+\eqref{eq:l12block} is the same statement. The minus sign is a consequence of
+the sign convention for the slope degree of freedom, not a loss of symmetry ---
+$\int u''v''$ is self-adjoint, so the matrix could not have come out
+unsymmetric.
+\end{pitfall}
+
+\begin{mechanics}
+The $12/h^{3}$, $6/h^{2}$, $4/h$, $2/h$ pattern in
+\eqref{eq:l12Ajk}--\eqref{eq:l12Cjk} is the classical Euler--Bernoulli beam
+element stiffness matrix with $EI=1$. In a structural code the element matrix
+is written once as
+$\frac{EI}{L^{3}}\begin{bsmallmatrix}12&6L&-12&6L\\6L&4L^{2}&-6L&2L^{2}\\
+-12&-6L&12&-6L\\6L&2L^{2}&-6L&4L^{2}\end{bsmallmatrix}$
+and assembled; here the same numbers arrive sorted by \emph{type} of degree of
+freedom instead of by node, which is why they appear as three separate blocks.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{RHS}
+
+Interpolate the load with the same Hermite basis,
+\begin{equation}\label{eq:l12fint}
+  f\ \longrightarrow\ \widetilde{\Pi}_h f
+  =\sum_{j=0}^{M+1}f(x_{j})\,\phih_{j}^{(1)}(x)
+   +\sum_{j=0}^{M+1}f'(x_{j})\,\phih_{j}^{(2)}(x),
+\end{equation}
+\begin{equation}\label{eq:l12fsub}
+  \int_0^1 f v\dx\ \longrightarrow\ \int_0^1\bigl(\widetilde{\Pi}_h f\bigr)v\dx .
+\end{equation}
+Now, for $j=1,2,\dots,M$,
+\begin{align}
+  f_{j}^{(1)}&=\frac{h}{70}\Bigl[9f(x_{j-1})+52f(x_{j})+9f(x_{j+1})\Bigr]
+     +\frac{13h^{2}}{420}\Bigl[f'(x_{j-1})-f'(x_{j+1})\Bigr],
+     \label{eq:l12f1}\\[0.6ex]
+  f_{j}^{(2)}&=\frac{13h^{2}}{420}\Bigl[f(x_{j+1})-f(x_{j-1})\Bigr]
+     -\frac{h^{3}}{420}\Bigl[3f'(x_{j-1})-8f'(x_{j})+3f'(x_{j+1})\Bigr].
+     \label{eq:l12f2}
+\end{align}
+
+% ==================================================================
+\subsection*{The final system}
+
+\begin{equation}\label{eq:l12system}
+  \left[\begin{array}{c|c}
+    \bm{A} & \bm{C}\\\hline
+    -\bm{C} & \bm{B}
+  \end{array}\right]
+  \left[\begin{array}{c}\bm{\xi}\\\hline\bm{\eta}\end{array}\right]
+  =\left[\begin{array}{c}\bm{f}^{(1)}\\\hline\bm{f}^{(2)}\end{array}\right],
+\end{equation}
+which is $2M\times2M$, symmetric, positive definite. Here $\bm{\eta}$ is the
+vector of \emph{derivative values at the nodes}.
+
+\begin{mechanics}
+\eqref{eq:l12system} is the assembled beam problem in the form a structural
+solver produces it: $\bm{\xi}$ are the nodal deflections, $\bm{\eta}$ the nodal
+rotations, $\bm{f}^{(1)}$ the consistent nodal forces and $\bm{f}^{(2)}$ the
+consistent nodal moments. The $13h^{2}/420$ and $h^{3}/420$ coefficients in
+\eqref{eq:l12f1}--\eqref{eq:l12f2} are the consistent load vector for a
+distributed load on a Hermite beam element --- the same numbers a code computes
+when you apply a pressure rather than a point load.
+\end{mechanics}
+
+\begin{dictionary}[beam FEM]
+$\xi_{j}$, the coefficient of $\phih_{j}^{(1)}$ & the nodal deflection $w_{j}$\\
+$\eta_{j}$, the coefficient of $\phih_{j}^{(2)}$ & the nodal rotation $\theta_{j}$\\
+$\bm{A}$ block & deflection--deflection stiffness\\
+$\bm{B}$ block & rotation--rotation stiffness\\
+$\bm{C}$ block & the deflection--rotation coupling\\
+$\bm{S}$ symmetric positive definite & the structure is stable and the energy is a genuine minimum\\
+$\widetilde{\Pi}_h f$ & lumping the distributed load onto nodal forces and moments\\
+\end{dictionary}
+
+\todoq{On page~2 the first interpolation error is written
+$\norm{u-\Pi_h u}\le c_{1}\norm{h^{4}u^{4}}$ --- the exponent on $u$ should be
+the superscript $(4)$, matching the other two lines; transcribed as $u^{(4)}$.
+Similarly the second sum in $\Pi_h u$ on that page runs to $n$ rather than $M$.}

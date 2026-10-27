@@ -1,0 +1,88 @@
+\documentclass[11pt]{report}
+
+\input{preamble}
+\input{macros}
+
+\title{\bfseries Finite Element Methods\\[0.3em]
+       \large Lecture Notes, Fall 2027\\[0.6em]
+       \normalsize\normalfont\itshape
+       transcribed, typeset, and annotated for a mechanics reader}
+\author{Hasan}
+\date{\today}
+
+\begin{document}
+
+\pagenumbering{roman}
+\maketitle
+\thispagestyle{empty}
+
+\chapter*{How to read these notes}
+\addcontentsline{toc}{chapter}{How to read these notes}
+\markboth{How to read these notes}{}
+
+These are my notes for a graduate finite element course taught out of the
+mathematics department. The mathematical content is transcribed from lecture;
+the coloured boxes are mine, added while working through the material.
+
+Every lecture opens with an orange \emph{big picture} box. The lecturer writes
+down perhaps half of what he says, so that box is the missing half: what this
+lecture is for, in bullets, and what it buys an engineer. Read it first.
+
+\begin{roadmap}[what this box is for]
+\roadq{The question the lecture answers.}
+\begin{roadlist}
+\item Three or four bullets --- what actually gets built, and why that step is
+  needed rather than the one before it.
+\end{roadlist}
+\payoff{The concrete thing you can do afterwards that you could not do before.}
+\end{roadmap}
+
+\begin{intuition}[what this box is for]
+Explains what an object \emph{is}, stripped of formalism --- what it measures,
+why it was invented, and what would break without it.
+\end{intuition}
+
+\begin{mechanics}
+Restates the same statement as a bar, a beam, a heat-conducting slab, or a
+stiffness matrix --- something with units.
+\end{mechanics}
+
+\begin{dictionary}
+$a(u,v)$, bilinear form & internal virtual work; the stiffness operator \\
+$V$, Hilbert space       & the set of displacement fields with finite strain energy \\
+coercivity               & the stiffness matrix is positive definite \\
+\end{dictionary}
+
+\begin{pitfall}
+Marks a specific place where the mathematician's phrasing and the engineer's
+phrasing describe the same thing but sound unrelated.
+\end{pitfall}
+
+\begin{recall}
+Background the lecturer assumed everyone had.
+\end{recall}
+
+\noindent
+\todoq{Marks something I could not read or did not follow in my own handwriting
+--- these are the questions to bring to office hours.}
+
+\tableofcontents
+
+\cleardoublepage
+\pagenumbering{arabic}
+
+\chapter{Lectures}
+
+\input{lectures/lec01}
+\input{lectures/lec02}
+\input{lectures/lec03}
+\input{lectures/lec04}
+\input{lectures/lec05}
+\input{lectures/lec06}
+\input{lectures/lec07}
+\input{lectures/lec08}
+\input{lectures/lec09}
+\input{lectures/lec10}
+\input{lectures/lec12}
+
+\end{document}

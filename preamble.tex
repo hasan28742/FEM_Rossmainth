@@ -1,0 +1,187 @@
+% ============================================================
+%  preamble.tex  --  packages, styling, custom environments
+% ============================================================
+
+% ---------- page ----------
+\usepackage[a4paper,margin=1in,marginparwidth=1.1in,headheight=14pt]{geometry}
+
+% ---------- math ----------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+
+% ---------- fonts ----------
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext}
+\usepackage{newpxmath}
+\usepackage[scaled=0.90]{helvet}   % sans face for box titles / headers
+% expansion=false: some newpx faces here are not scalable, and font expansion
+% is a fatal error with those. Protrusion still works and does most of the good.
+\usepackage[expansion=false]{microtype}
+
+% ---------- graphics / tables ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,patterns,
+                decorations.pathmorphing,decorations.pathreplacing}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ---------- headers ----------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\nouppercase{\leftmark}}
+\fancyhead[R]{\small\sffamily\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- colors ----------
+\usepackage{xcolor}
+\definecolor{IntFrame}{HTML}{1F6F8B}   % intuition   - teal
+\definecolor{IntBack} {HTML}{EAF3F6}
+\definecolor{DicFrame}{HTML}{6B4E9E}   % dictionary  - purple
+\definecolor{DicBack} {HTML}{F2EEF9}
+\definecolor{PitFrame}{HTML}{B23A3A}   % pitfall     - red
+\definecolor{PitBack} {HTML}{FBEDED}
+\definecolor{RecFrame}{HTML}{7A7A7A}   % recall      - grey
+\definecolor{RecBack} {HTML}{F4F4F4}
+\definecolor{MEFrame} {HTML}{2E7D4F}   % worked ME   - green
+\definecolor{MEBack}  {HTML}{EBF5EF}
+\definecolor{RoadFrame}{HTML}{B5651D}   % roadmap     - burnt orange
+\definecolor{RoadBack} {HTML}{FDF3E9}
+\definecolor{LinkCol} {HTML}{16506B}
+
+% ---------- links ----------
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=LinkCol, citecolor=LinkCol, urlcolor=LinkCol,
+  pdfborder={0 0 0}
+}
+\usepackage{xurl}
+
+% ---------- theorem environments ----------
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}[definition]{Example}
+\newtheorem{exercise}[definition]{Exercise}
+
+\theoremstyle{plain}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{corollary}[definition]{Corollary}
+
+\theoremstyle{remark}
+\newtheorem{remark}[definition]{Remark}
+
+% ---------- boxes ----------
+\usepackage[most]{tcolorbox}
+\tcbset{
+  femboxbase/.style={
+    enhanced, breakable, sharp corners=downhill,
+    boxrule=0.8pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+    fonttitle=\bfseries\sffamily\small,
+    attach boxed title to top left={xshift=8pt, yshift=-\tcboxedtitleheight/2},
+    boxed title style={sharp corners, boxrule=0pt, size=small},
+    toptitle=2pt,
+  }
+}
+
+% Intuition: the "why does this object exist / what is it really" box.
+\NewTColorBox{intuition}{ o }{%
+  femboxbase, colback=IntBack, colframe=IntFrame,
+  coltitle=white, colbacktitle=IntFrame,
+  title={Intuition\IfValueT{#1}{: #1}}
+}
+
+% Pitfall: the specific place ME students get derailed.
+\NewTColorBox{pitfall}{ o }{%
+  femboxbase, colback=PitBack, colframe=PitFrame,
+  coltitle=white, colbacktitle=PitFrame,
+  title={Where this trips people up\IfValueT{#1}{: #1}}
+}
+
+% Recall: prerequisite you were assumed to already have.
+\NewTColorBox{recall}{ o }{%
+  femboxbase, colback=RecBack, colframe=RecFrame,
+  coltitle=white, colbacktitle=RecFrame,
+  title={Recall\IfValueT{#1}{: #1}}
+}
+
+% Mechanics: the concrete engineering instance of the abstract statement.
+\NewTColorBox{mechanics}{ o }{%
+  femboxbase, colback=MEBack, colframe=MEFrame,
+  coltitle=white, colbacktitle=MEFrame,
+  title={In mechanics terms\IfValueT{#1}{: #1}}
+}
+
+% Roadmap: the bullet-point big picture, at the top of every lecture.
+% The lecturer writes maybe half of what he says; this is the half that
+% went missing -- what the lecture is for and what it buys you.
+\NewTColorBox{roadmap}{ o }{%
+  femboxbase, colback=RoadBack, colframe=RoadFrame,
+  coltitle=white, colbacktitle=RoadFrame,
+  title={The big picture\IfValueT{#1}{: #1}},
+  after skip=14pt
+}
+\newlist{roadlist}{itemize}{1}
+\setlist[roadlist]{label=\textcolor{RoadFrame}{\small$\blacktriangleright$},
+  leftmargin=1.6em, topsep=4pt, itemsep=3.5pt, parsep=0pt}
+% the one-line question the lecture answers, and the one-line payoff
+\newcommand{\roadq}[1]{\noindent\textit{#1}}
+\newcommand{\payoff}[1]{\par\smallskip\noindent
+  \textbf{\color{RoadFrame}Use it for:}\ #1}
+
+% Dictionary: two-column math <-> mechanics translation table.
+\NewTColorBox{dictbox}{ o }{%
+  femboxbase, colback=DicBack, colframe=DicFrame,
+  coltitle=white, colbacktitle=DicFrame,
+  title={Translation\IfValueT{#1}{: #1}}
+}
+
+% tabularx must see its whole body at once, so the rows are captured with
+% environ's \BODY rather than split across a \newenvironment.
+\usepackage{environ}
+\NewEnviron{dictionary}[1][]{%
+  \ifstrempty{#1}{\begin{dictbox}}{\begin{dictbox}[#1]}%
+  \renewcommand{\arraystretch}{1.25}%
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}X@{\hspace{1em}}>{\raggedright\arraybackslash}X@{}}
+  \toprule
+  \textbf{Math department writes} & \textbf{You should hear}\\
+  \midrule
+  \BODY
+  \bottomrule
+  \end{tabularx}%
+  \end{dictbox}%
+}
+
+% ---------- lecture heading ----------
+\usepackage{titlesec}
+\newcommand{\lecture}[3]{%
+  \section[#1]{#1}%
+  \noindent{\small\sffamily\color{RecFrame} #2 \hfill #3}\par
+  \vspace{0.4em}\hrule\vspace{1em}%
+}
+
+% ---------- transcript switch ----------
+% \transcripttrue in a master file  ->  suppress the added commentary,
+% leaving only the transcribed lecture. Default: full annotated notes.
+\newif\iftranscript
+\transcriptfalse
+
+% ---------- verdict marks ----------
+\newcommand{\cmark}{\textcolor{MEFrame}{\ensuremath{\checkmark}}}
+\newcommand{\xmark}{\textcolor{PitFrame}{\ensuremath{\times}}}
+
+% ---------- open questions marker ----------
+\newcommand{\todoq}[1]{%
+  \par\noindent{\color{PitFrame}\sffamily\small$\blacktriangleright$ \textbf{Unclear in my notes:} #1}\par
+}
+
+\allowdisplaybreaks
