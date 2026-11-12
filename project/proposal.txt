@@ -1,0 +1,85 @@
+MATH 6660 final project -- proposal drafts (due Mon Nov 9, 2026)
+Pick one, paste title + paragraph.
+
+======================================================================
+OPTION A (recommended) -- theorem + method + code, 1D
+======================================================================
+Title: Shear locking in thin beams and how mixed finite elements remove it
+
+Article: D. N. Arnold, "Discretization by finite elements of a model
+parameter dependent problem," Numerische Mathematik 37 (1981), 405-421.
+https://doi.org/10.1007/BF01386420   (also indexed at https://eudml.org/doc/132740)
+
+Proposal:
+Arnold studies a clamped Timoshenko beam of thickness t and shows that the
+standard finite element method loses accuracy as t -> 0 (shear locking),
+while a family of mixed methods, which includes the reduced-integration
+elements used in engineering practice, is quasi-optimal uniformly in t.
+I will present the main error estimate, explaining locking in the language
+of the course as a Cea bound whose constant degenerates as t -> 0, and why
+the mixed formulation removes that dependence. I will also write a short 1D
+code comparing full and reduced integration as t decreases.
+
+======================================================================
+OPTION B -- code paper, builds on HW4
+======================================================================
+Title: DistMesh: mesh generation from signed distance functions
+
+Article: P.-O. Persson and G. Strang, "A simple mesh generator in MATLAB,"
+SIAM Review 46 (2004), 329-345.  https://doi.org/10.1137/S0036144503429121
+
+Proposal:
+Persson and Strang generate triangular meshes by treating the mesh as a truss
+whose bars push nodes apart until force equilibrium, with the domain given
+implicitly by a signed distance function. I will explain the algorithm
+(force law, Delaunay retriangulation, projection of boundary nodes), run the
+code on several domains, and study mesh quality and its effect on finite
+element error. I will also examine what happens when the level set is not a
+true distance function, where boundary nodes can be left off the boundary.
+
+======================================================================
+OPTION C -- code paper, cG(1)/Q1 assembly
+======================================================================
+Title: A complete finite element solver in 50 lines of MATLAB
+
+Article: J. Alberty, C. Carstensen, S. A. Funken, "Remarks around 50 lines of
+Matlab: short finite element implementation," Numerical Algorithms 20 (1999),
+117-137.  https://doi.org/10.1023/A:1019155918070
+
+Proposal:
+Alberty, Carstensen and Funken give a one-page MATLAB code for P1 triangles
+and Q1 parallelograms solving elliptic problems with mixed Dirichlet/Neumann
+boundary conditions on unstructured meshes. I will explain how each line maps
+to the Galerkin formulation (local stiffness matrices, assembly, boundary
+conditions), run the code, and verify the expected convergence rates,
+extending it to a nonlinear or time-dependent example from the paper.
+
+======================================================================
+OPTION D  <-- CHOSEN (Nov 8): CZM part of mowry-cdm-czm, Camanho foundation
+======================================================================
+Title: Mixed-mode cohesive zone elements under compression: Camanho's
+bilinear law, its finite element implementation, and its limits for a
+confined natural fracture
+
+Article: P. P. Camanho, C. G. Davila, M. F. de Moura, "Numerical simulation
+of mixed-mode progressive delamination in composite materials," Journal of
+Composite Materials 37 (2003), 1415-1438.
+https://doi.org/10.1177/0021998303034505
+(Journal version of NASA/TM-2002-211737, the report MOOSE cites for its
+bilinear mixed-mode law.)
+
+Proposal:
+Camanho, Davila and de Moura model interface fracture with zero-thickness
+decohesion elements governed by a bilinear mixed-mode traction-separation
+law: a quadratic stress criterion for damage onset, the Benzeggagh-Kenane
+criterion for propagation, and a single irreversible damage variable. I will
+derive the finite element formulation, in which an interface integral of
+traction times the jump of the test function enters the weak form, and show
+how the damage evolves in pure opening, pure shear and compression-shear
+using single-element MOOSE simulations from my ongoing CDM+CZM work on
+natural-fracture reactivation in shale. I will then focus on compression,
+where the law assumes that normal pressure affects neither damage onset nor
+toughness, show how the implementation of its closed-interface branch changes
+the dissipated shear energy, and outline the extensions a confined fracture
+needs: friction acting on the damaged part of the interface and
+compression-enhanced shear toughness.

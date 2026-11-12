@@ -1,0 +1,1097 @@
+\lecture{The abstract framework: Lax--Milgram, C\'ea, and the move to 2D}{Lectures 13--18 --- late September to mid-October, 2026}{Math 6660 --- \texttt{prashant2.pdf} (colleague's notes)}
+
+\noindent{\small\itshape These lectures are missing from my own notebook; the
+transcription below follows a classmate's notes, so the wording and the order of
+presentation are his, not mine. Only two dates are legible in the scan ---
+\textbf{2/Oct/26} at the abstract variational formulation, and
+\textbf{12/Oct/26} at the biharmonic example --- so the lecture numbering above
+is my reconstruction, not something written in the source. Pages 1--18 of that
+scan repeat material already transcribed in Lectures 7--12; the transcription
+starts where the new material does.}
+
+\begin{roadmap}[Lectures 13--18]
+\roadq{Every problem so far has been solved by the same four moves. What is the
+       general theorem, and what does it cost to go to two dimensions?}
+\begin{roadlist}
+\item The bar and the beam get rewritten in \emph{one} language:
+  $B(u,v)=L(v)$. Everything specific to the problem is pushed into three
+  properties of $B$ --- symmetric, bounded, elliptic.
+\item \textbf{Lax--Milgram} then says: those three properties alone guarantee a
+  unique solution. No more re-deriving existence for each new PDE.
+\item \textbf{C\'ea's lemma} in general form: $\norm{u-u_h}\le
+  (\beta^{*}/\beta_{*})\norm{u-v}$. The constant $1$ we had before was the lucky
+  case.
+\item The same abstract theorem gives, for free, that the stiffness matrix is
+  \textbf{symmetric positive definite} --- in any dimension, any polynomial
+  order, any mesh.
+\item Then 2D: Poisson on a triangulated domain, the biharmonic plate (and why
+  it needs the 21-degree-of-freedom Argyris element), and how a mesh is actually
+  generated --- Voronoi, Delaunay, level sets.
+\end{roadlist}
+\payoff{This is the point where the course stops being about one-dimensional
+examples and becomes the theory a real FE code is built on.}
+\end{roadmap}
+
+% ==================================================================
+\section*{Part I --- the abstract formulation}
+% ==================================================================
+\subsection*{So far: two examples}
+
+Both problems solved so far have the same shape.
+
+\medskip\noindent
+\textbf{(1) The two-point BVP.}
+\begin{equation}\label{eq:l13ex1}
+  -(au')'=f \ \text{ in } (0,1),\qquad u(0)=u(1)=0,
+\end{equation}
+\begin{equation}\label{eq:l13ex1V}
+  \Vsp=\Bigl\{v:\ \int_0^1\bigl[v^{2}+(v')^{2}\bigr]\dx<\infty,\ \ v(0)=v(1)=0\Bigr\},
+\end{equation}
+\begin{equation}\label{eq:l13ex1B}
+  B(u,v)=\int_0^1 a\,u'v'\dx,\qquad L(v)=\int_0^1 f v\dx .
+\end{equation}
+
+\noindent
+\textbf{(2) The beam equation.}
+\begin{equation}\label{eq:l13ex2V}
+  \Vsp=\Bigl\{v:\ \int_0^1\bigl[v^{2}+(v')^{2}+(v'')^{2}\bigr]\dx<\infty,\ \
+  v(0)=v(1)=v'(0)=v'(1)=0\Bigr\},
+\end{equation}
+\begin{equation}\label{eq:l13ex2B}
+  B(u,v)=\int_0^1 u''v''\dx,\qquad L(v)=\int_0^1 f v\dx .
+\end{equation}
+
+\noindent
+In both cases:
+\begin{equation}\label{eq:l13absvar}
+  \textbf{(Var.\ Prob.)}\quad\text{Find } u\in\Vsp \text{ s.t. }
+  B(u,v)=L(v)\quad\forall\,v\in\Vsp ,
+\end{equation}
+\begin{equation}\label{eq:l13absmin}
+  F(w)=\tfrac12 B(w,w)-L(w),\qquad
+  \textbf{(Energy Min.)}\quad\text{Find } u\in\Vsp \text{ s.t. }
+  F(u)\le F(w)\ \ \forall\,w\in\Vsp .
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} We seek a \textbf{conforming} FEM: $\Vh\subset\Vsp$.
+(A non-conforming FEM has $\Vh\not\subset\Vsp$.)
+
+\begin{intuition}[what is actually being abstracted]
+Nothing new is being claimed here --- \eqref{eq:l13ex1B} and
+\eqref{eq:l13ex2B} are the weak forms already derived. The move is to stop
+writing the integrals and give them a name. Once the bar and the beam are both
+``$B(u,v)=L(v)$'', any theorem proved about $B$ and $L$ applies to both at
+once, and to the 2D problems later in these lectures that have not been written
+down yet.
+
+The price is that $B$ and $L$ say nothing about \emph{which} problem you are
+solving. Everything that distinguishes a bar from a beam has been pushed into
+the space $\Vsp$ and into the three properties of $B$ defined below.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Multi-index notation}
+
+Consider a domain $\Om\subset\R^{d}$. Derivatives are defined via a
+\textbf{multi-index}: let $\alpha=(\alpha_{1},\alpha_{2},\dots,\alpha_{d})$ be a
+$d$-tuple, where the $\alpha_{i}$ are non-negative integers. The \emph{length}
+of $\alpha$ is
+\begin{equation}\label{eq:l13mlen}
+  |\alpha|=\alpha_{1}+\alpha_{2}+\dots+\alpha_{d},
+\end{equation}
+and the corresponding derivative of $v$ is
+\begin{equation}\label{eq:l13Dalpha}
+  D^{\alpha}v=\frac{\partial^{|\alpha|}v}
+       {\partial x_{1}^{\alpha_{1}}\,\partial x_{2}^{\alpha_{2}}\cdots
+        \partial x_{d}^{\alpha_{d}}} .
+\end{equation}
+
+\noindent
+\textbf{Ex.} If $d=2$ and $|\alpha|=2$:
+\[
+  D^{(2,0)}v=\frac{\partial^{2}v}{\partial x_{1}^{2}},\qquad
+  D^{(0,2)}v=\frac{\partial^{2}v}{\partial x_{2}^{2}},\qquad
+  D^{(1,1)}v=\frac{\partial^{2}v}{\partial x_{1}\partial x_{2}} .
+\]
+
+\begin{intuition}[why bother]
+In 1D you can write $v$, $v'$, $v''$ and be done. In 2D ``the second
+derivatives'' is already three different objects, and in $d$ dimensions it is
+$\binom{d+1}{2}$ of them. The multi-index is bookkeeping that lets
+``\emph{all} derivatives up to order $r$'' be written as a single sum
+$\sum_{|\alpha|\le r}$ instead of an expanding list. Every Sobolev definition
+below uses exactly that.
+\end{intuition}
+
+% ==================================================================
+\subsection*{Sobolev spaces}
+
+\begin{equation}\label{eq:l13Lloc}
+  L^{1}_{\mathrm{loc}}(\Om)\defeq\bigl\{v:\ v\in L^{1}(K)
+  \text{ for any compact subset } K \text{ inside } \Om\bigr\} .
+\end{equation}
+
+\noindent
+\textbf{Defn (Sobolev space).}
+\begin{equation}\label{eq:l13Wrq}
+  W^{r,q}(\Om)=\Bigl\{v\in L^{1}_{\mathrm{loc}}(\Om):\
+  \norm{v}_{W^{r,q}(\Om)}<\infty\Bigr\},
+\end{equation}
+where
+\begin{equation}\label{eq:l13Wnorm}
+  \norm{v}_{W^{r,q}(\Om)}\defeq
+  \Bigl[\sum_{|\alpha|\le r}\norm{D^{\alpha}v}^{q}_{L^{q}(\Om)}\Bigr]^{1/q},
+  \qquad 1\le q<\infty,\quad r\ge0,
+\end{equation}
+and
+\begin{equation}\label{eq:l13Lqnorm}
+  \norm{v}^{q}_{L^{q}(\Om)}=\int_{\Om}|v|^{q}\dx .
+\end{equation}
+
+\noindent
+\textbf{Defn (Sobolev space with homogeneous BCs).}
+\begin{equation}\label{eq:l13W0}
+  W^{r,q}_{0}(\Om)=\Bigl\{v\in W^{r,q}(\Om):\
+  D^{\alpha}v\big|_{\dOm}=0 \text{ for } |\alpha|<r\Bigr\} .
+\end{equation}
+
+\todoq{On the page where the $L^{q}$ norm is first introduced my colleague's
+notes write $\norm{u}_{L^{q}(\Om)}\defeq\int_{\Om}|u|\dx$, with no exponent $q$
+and no outer root. That cannot be right --- it would make the $L^{q}$ norm
+independent of $q$ --- and the correct form appears two lines later as
+\eqref{eq:l13Lqnorm}. Transcribed as \eqref{eq:l13Lqnorm}; worth confirming
+against the lecturer's own notes.}
+
+% ==================================================================
+\subsection*{Hilbert spaces}
+
+\textbf{Defn (Hilbert space).} When $q=2$ we write
+$W^{r,2}(\Om)=\Hs{r}$. This is called a \textbf{Hilbert space}, with
+\begin{equation}\label{eq:l13Hnorm}
+  \norm{v}_{\Hs{r}}=\sqrt{(v,v)_{\Hs{r}}},
+  \qquad
+  (v,w)_{\Hs{r}}\defeq\sum_{|\alpha|\le r}\int_{\Om}
+     \bigl(D^{\alpha}v\bigr)\bigl(D^{\alpha}w\bigr)\dx .
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} $r=0$ also makes sense: $H^{0}(\Om)=\Ltwo$.
+
+\medskip\noindent
+\textbf{Defn (semi-norm).}
+\begin{equation}\label{eq:l13semi}
+  |v|_{\Hs{r}}=\sqrt{\sum_{|\alpha|=r}\int_{\Om}\bigl(D^{\alpha}v\bigr)^{2}\dx} .
+\end{equation}
+
+\begin{intuition}[norm vs.\ semi-norm, in one line]
+The norm sums over $|\alpha|\le r$ --- \emph{every} derivative up to order $r$,
+including the function itself. The semi-norm sums over $|\alpha|=r$ --- only the
+\emph{top} ones. So $|v|_{H^{r}}=0$ does not force $v=0$; it only forces $v$ to
+be a polynomial of degree $<r$. That is why a semi-norm appears on the
+right-hand side of every interpolation estimate: what the interpolant cannot
+reproduce is exactly the top derivative, and the lower ones are irrelevant to
+the error.
+\end{intuition}
+
+\begin{dictionary}[the spaces in engineering terms]
+$\Ltwo$ & finite ``size'': $\int v^{2}<\infty$\\
+$\Hone$ & finite strain energy for a bar: $\int (v')^{2}<\infty$\\
+$\Honez$ & the same, and clamped at the boundary\\
+$H^{2}_{0}(\Om)$ & finite bending energy, clamped \emph{and} zero slope --- the beam/plate space\\
+$|v|_{H^{r}}$ & the energy-like part only, with the rigid-body content stripped out\\
+\end{dictionary}
+
+\medskip\noindent
+\textbf{Note.} For the remainder of the discussion, let $\Vsp$ be a Hilbert
+space with inner product $(\cdot,\cdot)_{\Vsp}$ and corresponding norm
+$\norm{\cdot}_{\Vsp}$.
+
+% ==================================================================
+\subsection*{Linear functionals and the dual space}
+
+\textbf{Defn.} A mapping $L:\Vsp\to\R$ is a \textbf{linear functional} if
+\begin{equation}\label{eq:l13lin}
+  L(\alpha u+\beta v)=\alpha L(u)+\beta L(v)
+  \qquad\forall\,\alpha,\beta\in\R,\ \forall\,u,v\in\Vsp .
+\end{equation}
+$L$ is \textbf{bounded} in the norm $\norm{\cdot}_{\Vsp}$ if there exists a
+constant $\widetilde{L}>0$ such that
+\begin{equation}\label{eq:l13bdd}
+  |L(v)|\le\widetilde{L}\,\norm{v}_{\Vsp}\qquad\forall\,v\in\Vsp .
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} A bounded linear functional is continuous:
+\[
+  L(v)-L(w)=L(v-w)
+  \ \Longrightarrow\
+  |L(v)-L(w)|=|L(v-w)|\le\widetilde{L}\norm{v-w}_{\Vsp} .
+\]
+The converse is also true: a continuous linear functional is bounded.
+
+\medskip\noindent
+\textbf{Defn.} The set of bounded linear functionals on $\Vsp$ is termed the
+\textbf{dual space} of $\Vsp$, denoted $\Vsp'$, equipped with the norm
+\begin{equation}\label{eq:l13dualnorm}
+  \norm{L}_{\Vsp'}=\sup_{\substack{v\in\Vsp\\ v\neq0}}
+  \frac{L(v)}{\norm{v}_{\Vsp}}\;\le\;\widetilde{L} .
+\end{equation}
+
+\medskip\noindent
+\textbf{Ex.\ (dual space of $L^{q}(\Om)$).} Consider the linear functional
+$L(v)=\int_{\Om}f(x)v(x)\dx$ for $f\in L^{q'}(\Om)$ where
+$\tfrac1q+\tfrac1{q'}=1$. \textbf{H\"older's inequality},
+\begin{equation}\label{eq:l13holder}
+  \norm{uv}_{L^{1}(\Om)}\le\norm{u}_{L^{q'}(\Om)}\norm{v}_{L^{q}(\Om)}
+  \qquad\forall\,u\in L^{q'}(\Om),\ v\in L^{q}(\Om),
+\end{equation}
+gives $|L(v)|\le\norm{f}_{L^{q'}}\norm{v}_{L^{q}}$. So every
+$f\in L^{q'}(\Om)$ can be viewed as a bounded linear functional on $L^{q}(\Om)$;
+every bounded linear functional on $L^{q}(\Om)$ is of this form; hence
+$L^{q'}(\Om)$ is the dual space of $L^{q}(\Om)$.
+
+\medskip\noindent
+\textbf{Thm (Riesz representation).} Let $H$ be a Hilbert space with scalar
+product $(\cdot,\cdot)_{H}$. Then for any continuous linear functional
+$L:H\to\R$ there exists a \emph{unique} $u\in H$ such that
+\begin{equation}\label{eq:l13riesz}
+  L(v)=(u,v)_{H}\qquad\forall\,v\in H .
+\end{equation}
+
+\begin{mechanics}[what Riesz is doing for us]
+A load is a functional: it eats a virtual displacement and returns a number
+(the work done). Riesz says that any such load, provided it is bounded, is
+secretly \emph{a displacement field} paired against the virtual displacement
+through the energy inner product. That identification is the entire existence
+proof for Lax--Milgram below --- the load $L$ gets converted into the solution
+$u$.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{Abstract variational problems}
+
+\textbf{Defn (bilinear form).} Let $\Vsp$ be a Hilbert space with scalar
+product $(\cdot,\cdot)_{\Vsp}$. Then $B(\cdot,\cdot):\Vsp\times\Vsp\to\R$ is a
+\textbf{bilinear form} if
+\begin{equation}\label{eq:l13bilin}
+  B(u,\alpha v+\beta w)=\alpha B(u,v)+\beta B(u,w),\qquad
+  B(\alpha u+\beta v,w)=\alpha B(u,w)+\beta B(v,w)
+\end{equation}
+for all $\alpha,\beta\in\R$ and all $u,v,w\in\Vsp$.
+
+\medskip
+The three properties that everything below depends on:
+
+\medskip\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{(S) Symmetric.} $B(u,v)=B(v,u)\quad\forall\,u,v\in\Vsp$.
+
+\medskip
+\textbf{(CB) Continuous / bounded.} There exists $\beta^{*}>0$ such that
+\[
+  B(u,v)\le|B(u,v)|\le\beta^{*}\norm{u}_{\Vsp}\norm{v}_{\Vsp}
+  \qquad\forall\,u,v\in\Vsp .
+\]
+
+\medskip
+\textbf{(VE) $\Vsp$-elliptic (a.k.a.\ coercive).} There exists $\beta_{*}>0$
+such that
+\[
+  B(v,v)\ge\beta_{*}\norm{v}^{2}_{\Vsp}\qquad\forall\,v\in\Vsp .
+\]}}
+
+\medskip\noindent
+\textbf{Defn (abstract variational problem).} Let
+$B(\cdot,\cdot):\Vsp\times\Vsp\to\R$ be a bilinear form satisfying (S), (CB)
+and (VE). Let $L(\cdot):\Vsp\to\R$ be a linear functional bounded in
+$\norm{\cdot}_{\Vsp}$, \ie $|L(v)|\le\widetilde{L}\norm{v}_{\Vsp}$
+$\forall v\in\Vsp$. Then
+\begin{align}
+  \textbf{(1) Var.\ Prob.}&\quad\text{Find } u\in\Vsp \text{ s.t. }
+     B(u,v)=L(v)\ \ \forall\,v\in\Vsp,\label{eq:l13VP}\\
+  \textbf{(2) Energy Min.}&\quad\text{Find } u\in\Vsp \text{ s.t. }
+     F(u)\le F(w)\ \ \forall\,w\in\Vsp,\quad
+     F(v)=\tfrac12 B(v,v)-L(v).\label{eq:l13EM}
+\end{align}
+
+\begin{mechanics}[the three conditions as structural statements]
+\textbf{(S)} is Maxwell--Betti reciprocity: the work done by load A through
+displacement B equals the work of B through A. It is what makes $\Kmat$
+symmetric.
+
+\textbf{(CB)} says the structure cannot store infinite energy from a finite
+displacement --- the material is bounded in stiffness.
+
+\textbf{(VE)} says every admissible non-zero displacement stores
+\emph{positive} energy, bounded below by $\beta_{*}$. This is the statement
+that the structure has no mechanism and no rigid-body mode left: it is why
+$\Kmat$ is positive definite and not merely positive semi-definite.
+$\beta_{*}$ is, in effect, the softest mode of the structure.
+\end{mechanics}
+
+% ------------------------------------------------------------------
+\subsubsection*{Claim: (1) and (2) are equivalent}
+
+\paragraph{($\Longrightarrow$)} Assume $u\in\Vsp$ satisfies the variational
+problem. Let $w=u+v\in\Vsp$ for some $v\in\Vsp$. Then
+\begin{align}
+  F(w)=F(u+v)&=\tfrac12 B(u+v,u+v)-L(u+v),\notag\\
+  B(u+v,u+v)&=B(u,u+v)+B(v,u+v)=B(u,u)+2B(u,v)+B(v,v)
+     \quad\text{(used (S))},\label{eq:l13expand}
+\end{align}
+so
+\begin{equation}\label{eq:l13complete}
+  F(u+v)=\underbrace{\Bigl[\tfrac12 B(u,u)-L(u)\Bigr]}_{F(u)}
+   +\underbrace{\Bigl[B(u,v)-L(v)\Bigr]}_{=\,0\ \text{by (Var.\ Prob.)}}
+   +\tfrac12 B(v,v),
+\end{equation}
+\ie $F(w)=F(u)+\tfrac12 B(v,v)$. But $B(v,v)\ge\beta_{*}\norm{v}^{2}_{\Vsp}>0$
+for $v\neq0$ by (VE), hence
+\begin{equation}
+  F(u)\le F(w)\qquad\forall\,w\in\Vsp .
+\end{equation}
+
+\paragraph{($\Longleftarrow$)} Assume $u\in\Vsp$ satisfies $F(u)\le F(w)$
+$\forall w\in\Vsp$. Let
+\begin{equation}\label{eq:l13g}
+  g(\eps)=F(u+\eps v)\qquad\text{for fixed but arbitrary } v\in\Vsp .
+\end{equation}
+Expanding,
+\begin{equation}\label{eq:l13gexp}
+  g(\eps)=F(u)+\eps B(u,v)-\eps L(v)+\tfrac{\eps^{2}}{2}B(v,v),
+\end{equation}
+\begin{equation}\label{eq:l13gprime}
+  g'(\eps)=B(u,v)-L(v)+\eps\,B(v,v),
+\end{equation}
+and $g'(0)=0$ gives $B(u,v)=L(v)$. \qed
+
+\begin{recall}[this is Lecture 3 and Lecture 11 again]
+The bar version of this proof is Lecture 3; the beam version is Lecture 11.
+The algebra is identical in all three --- complete the square one way, take
+$\tfrac{\dd}{\dd\eps}$ at $\eps=0$ the other. What is new is only that it is
+now done \emph{once}, for every problem of this shape at the same time.
+\end{recall}
+
+% ==================================================================
+\subsection*{The Lax--Milgram theorem \hfill {\normalfont\small [2/Oct/26]}}
+
+\medskip\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{Thm (Lax--Milgram).} Let $\Vsp$ be a Hilbert space with norm
+$\norm{\cdot}_{\Vsp}$. Let $B(\cdot,\cdot):\Vsp\times\Vsp\to\R$ be a bilinear
+form satisfying (S), (CB) and (VE). Let $L(\cdot):\Vsp\to\R$ be a bounded
+linear functional. Then there exists a \textbf{unique} solution to the
+variational problem
+\[
+  \text{find } u\in\Vsp \text{ s.t. } B(u,v)=L(v)\ \ \forall\,v\in\Vsp,
+\]
+with the property that
+\[
+  \norm{u}_{\Vsp}\le\frac{\widetilde{L}}{\beta_{*}},
+\]
+where $\widetilde{L},\beta_{*}$ are real positive constants.}}
+
+\medskip\noindent
+\textbf{Proof.} Since $B(\cdot,\cdot)$ is symmetric and $\Vsp$-elliptic, it
+induces a scalar product on $\Vsp$:
+\begin{equation}\label{eq:l13energyip}
+  [u,v]\defeq B(u,v)\qquad\forall\,u,v\in\Vsp .
+\end{equation}
+By (VE) and (CB),
+\begin{equation}\label{eq:l13equiv}
+  [v,v]=B(v,v)\ge\beta_{*}\norm{v}^{2}_{\Vsp},
+  \qquad
+  [v,v]=B(v,v)\le\beta^{*}\norm{v}^{2}_{\Vsp},
+\end{equation}
+so
+\begin{equation}\label{eq:l13equiv2}
+  \boxed{\;\beta_{*}\norm{v}^{2}_{\Vsp}\le[v,v]\le\beta^{*}\norm{v}^{2}_{\Vsp}\;}
+\end{equation}
+and the norms $\sqrt{[v,v]}$ and $\norm{v}_{\Vsp}$ are \textbf{equivalent}.
+Therefore $L(\cdot)$ is bounded in both. By the Riesz representation theorem
+\eqref{eq:l13riesz} there exists a unique $u\in\Vsp$ such that
+$L(v)=[u,v]$ $\forall v\in\Vsp$, \ie a unique $u\in\Vsp$ with
+$B(u,v)=L(v)$ $\forall v\in\Vsp$.
+
+\medskip
+For the solution bound,
+\begin{equation}\label{eq:l13bound}
+  \beta_{*}\norm{u}^{2}_{\Vsp}\le B(u,u)=L(u)\le\widetilde{L}\norm{u}_{\Vsp}
+  \ \Longrightarrow\
+  \norm{u}_{\Vsp}\le\frac{\widetilde{L}}{\beta_{*}} . \qed
+\end{equation}
+
+\begin{intuition}[what Lax--Milgram buys, in one sentence]
+Up to now, every new BVP needed its own argument that a solution exists and is
+unique. Lax--Milgram replaces all of them with a checklist: write the weak
+form, verify (S), (CB), (VE), and you are done --- existence, uniqueness, and a
+bound on how big the answer can get, all three.
+
+The bound \eqref{eq:l13bound} is also the \emph{stability} statement: double
+the load and the response at most doubles, with constant $1/\beta_{*}$. A
+structure with a nearly-singular mode has a tiny $\beta_{*}$ and is predicted,
+correctly, to be sensitive.
+\end{intuition}
+
+\begin{pitfall}[(S) is not actually needed for Lax--Milgram]
+The theorem as stated in lecture assumes (S), (CB) \emph{and} (VE), and the
+proof given uses (S) to build the inner product $[u,v]$ and then quotes Riesz.
+The standard Lax--Milgram theorem does \emph{not} require symmetry --- it holds
+for non-symmetric $B$, at the cost of a longer proof that cannot use Riesz
+directly. Symmetry is what lets the short proof above work, and it is also what
+gives the energy-minimisation reading \eqref{eq:l13EM}; a non-symmetric problem
+(\eg\ one with a $b\,u'$ convection term, cf.\ Lecture 1) has no energy
+functional to minimise but still has a unique weak solution.
+\end{pitfall}
+
+% ==================================================================
+\section*{Part II --- conforming FEM in the abstract setting}
+% ==================================================================
+\subsection*{The discrete problem}
+
+Replace $\Vsp$ by a finite-dimensional subspace $\Vh\subset\Vsp$
+(\emph{conforming}):
+\begin{equation}\label{eq:l13fem}
+  \text{Find } \uh\in\Vh \text{ s.t. } B(\uh,v)=L(v)\quad\forall\,v\in\Vh .
+\end{equation}
+Lax--Milgram still applies to this, so there exists a unique solution with
+$\norm{\uh}_{\Vsp}\le\widetilde{L}/\beta_{*}$.
+
+\medskip
+Let $\{\phih_{i}\}_{i=1}^{M}$ be a basis for $\Vh$, take $v=\phih_{j}$,
+$j=1,\dots,M$, and write $\uh=\sum_{i=1}^{M}\xi_{i}\phih_{i}$. Then
+\begin{equation}\label{eq:l13sum}
+  \sum_{i=1}^{M}B(\phih_{i},\phih_{j})\,\xi_{i}=L(\phih_{j}),
+  \qquad j=1,2,\dots,M,
+\end{equation}
+\ie the linear system
+\begin{equation}\label{eq:l13system}
+  \boxed{\;\bm{A}\,\bm{\xi}=\bm{b}\;}
+  \qquad
+  A_{ij}=B(\phih_{i},\phih_{j}),\quad
+  \bm{\xi}=(\xi_{1},\xi_{2},\dots,\xi_{M}),\quad
+  b_{j}=L(\phih_{j}).
+\end{equation}
+
+% ------------------------------------------------------------------
+\subsubsection*{Claim: under (S) and (VE), $\bm{A}$ is symmetric positive definite}
+
+\paragraph{(1) Symmetry} follows directly from (S):
+\begin{equation}
+  A_{ij}=B(\phih_{i},\phih_{j})=B(\phih_{j},\phih_{i})=A_{ji}.
+\end{equation}
+
+\paragraph{(2) Positive definiteness.} Let
+$w=\sum_{i=1}^{M}w_{i}\phih_{i}\in\Vh$. By (VE),
+$B(w,w)\ge\beta_{*}\norm{w}^{2}_{\Vsp}$, so if $w\not\equiv0$ then
+$B(w,w)>0$. Expanding,
+\begin{equation}\label{eq:l13quad}
+  B\Bigl(\sum_{i=1}^{M}w_{i}\phih_{i},\,w\Bigr)
+   =\sum_{i=1}^{M}w_{i}B(\phih_{i},w)
+   =\sum_{i=1}^{M}w_{i}B\Bigl(\phih_{i},\sum_{j=1}^{M}w_{j}\phih_{j}\Bigr)
+   =\sum_{i=1}^{M}\sum_{j=1}^{M}w_{i}\underbrace{B(\phih_{i},\phih_{j})}_{A_{ij}}w_{j}
+   =\bm{w}^{T}\bm{A}\,\bm{w}>0
+\end{equation}
+by (VE). Hence $\bm{A}$ is positive definite. \qed
+
+\medskip\noindent
+\textbf{Note.} This means a conforming FEM for this abstract variational
+problem will generate an SPD linear system --- \emph{independent of} the number
+of dimensions, the polynomial order, the shape of the solution domain $\Om$,
+the type of mesh, etc.
+
+\begin{intuition}[why this note is the point of the whole abstraction]
+Every stiffness matrix met so far came out symmetric positive definite, and
+each time it was verified by looking at the numbers. \eqref{eq:l13quad} shows
+it was never a coincidence: $\bm{w}^{T}\bm{A}\bm{w}$ \emph{is} $B(w,w)$, the
+energy of the function $w$, so (VE) --- a statement about the physics ---
+becomes positive definiteness, a statement about the matrix. Nothing about 1D,
+cubics or uniform meshes entered the argument, which is exactly why the result
+survives into 2D in Part III.
+\end{intuition}
+
+% ==================================================================
+\subsection*{C\'ea's lemma}
+
+\medskip\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{Thm (C\'ea's lemma).} Let $\Vsp$ be a Hilbert space with norm
+$\norm{\cdot}_{\Vsp}$, let $B$ be a bilinear form satisfying (S), (CB) and
+(VE), and let $L$ be a linear bounded functional. Let $\Vh\subset\Vsp$ be a
+finite-dimensional subspace, and let $u$, $\uh$ solve
+\eqref{eq:l13VP} and \eqref{eq:l13fem} respectively. Then
+\[
+  \norm{u-\uh}_{\Vsp}\;\le\;\frac{\beta^{*}}{\beta_{*}}\,\norm{u-v}_{\Vsp}
+  \qquad\forall\,v\in\Vh .
+\]}}
+
+\medskip\noindent
+\textbf{Proof.} Subtract (Var.\ Prob.) and (FEM):
+\begin{equation}\label{eq:l13GO}
+  B(u,v)-B(\uh,v)=0\ \ \forall\,v\in\Vh
+  \qquad\Longrightarrow\qquad
+  \boxed{\;B(u-\uh,\,v)=0\quad\forall\,v\in\Vh\;}
+\end{equation}
+which is \textbf{Galerkin orthogonality}. Now take
+\begin{equation}\label{eq:l13cea1}
+  B(u-\uh,\,u-\uh)=B(u-\uh,\,u-v+v-\uh)
+   =B(u-\uh,\,u-v)+\underbrace{B(u-\uh,\,v-\uh)}_{=\,0\ \text{by \eqref{eq:l13GO}}} ,
+\end{equation}
+so, using (VE) on the left and (CB) on the right,
+\begin{equation}\label{eq:l13cea2}
+  \beta_{*}\norm{u-\uh}^{2}_{\Vsp}\le B(u-\uh,u-\uh)=B(u-\uh,u-v)
+   \le\beta^{*}\norm{u-\uh}_{\Vsp}\norm{u-v}_{\Vsp},
+\end{equation}
+and cancelling one factor $\norm{u-\uh}_{\Vsp}$,
+\begin{equation}\label{eq:l13cea3}
+  \boxed{\;\norm{u-\uh}_{\Vsp}\le\frac{\beta^{*}}{\beta_{*}}\norm{u-v}_{\Vsp}\;}
+  \qquad\qed
+\end{equation}
+
+\medskip\noindent
+\textbf{Note (error estimate in $\norm{\cdot}_{\Vsp}$).} Take
+$v=\Ih u$, the projection of $u\in\Vsp$ into $\Vh$. Then
+\begin{equation}\label{eq:l13ceainterp}
+  \norm{u-\uh}_{\Vsp}\le\frac{\beta^{*}}{\beta_{*}}\norm{u-\Ih u}_{\Vsp},
+\end{equation}
+where $\norm{u-\Ih u}_{\Vsp}$ is the \emph{interpolation} error measured in
+$\norm{\cdot}_{\Vsp}$. If you can generate a sequence of meshes and associated
+bases such that $\norm{u-\Ih u}_{\Vsp}\to0$ as $h\to0$, then you have
+convergence; typically
+\begin{equation}\label{eq:l13rate}
+  \norm{u-\Ih u}_{\Vsp}=\mathcal{O}(h^{p}).
+\end{equation}
+
+\begin{pitfall}[the constant is no longer $1$]
+Lecture 6 proved $\norm{u-U}_{E}\le\norm{u-v}_{E}$ --- constant exactly $1$ ---
+and that is \emph{not} the general case. It happened because the energy norm
+there was built from the same $a$ as the bilinear form, making
+$\beta^{*}=\beta_{*}=1$ by construction. In a general norm
+$\norm{\cdot}_{\Vsp}$ the constant is $\beta^{*}/\beta_{*}$, a condition-number
+sort of quantity: $\uh$ is \emph{quasi}-optimal, within a fixed factor of the
+best approximation, not the best approximation itself.
+\end{pitfall}
+
+% ==================================================================
+\subsection*{Example: the 1D Dirichlet problem, checked against the three conditions}
+
+\begin{equation}\label{eq:l13ex1d}
+  -u''=f \ \text{ in } (0,1),\qquad u(0)=u(1)=0,
+  \qquad I=(0,1),\qquad \Vsp=H^{1}_{0}(I),
+\end{equation}
+\begin{equation}\label{eq:l13ex1dnorm}
+  \norm{v}^{2}_{\Vsp}=\int_{0}^{1}\bigl[(v')^{2}+v^{2}\bigr]\dx
+   =\norm{v'}^{2}_{L^{2}(I)}+\norm{v}^{2}_{L^{2}(I)},
+\end{equation}
+\begin{equation}\label{eq:l13ex1dBL}
+  B(u,v)=\int_{0}^{1}u'v'\dx,\qquad L(v)=\int_{0}^{1}fv\dx .
+\end{equation}
+
+\noindent
+\textbf{Check conditions.}
+\begin{enumerate}[label=\arabic*),leftmargin=2.2em,itemsep=3pt]
+\item \textbf{Symmetric:} $(u',v')=(v',u')$. \cmark
+\item \textbf{Continuous / bounded:}
+  $|B(u,v)|\le\norm{u'}_{L^{2}(I)}\norm{v'}_{L^{2}(I)}
+   \le\norm{u}_{\Vsp}\norm{v}_{\Vsp}$, so $\beta^{*}=1$. \cmark
+\item \textbf{$\Vsp$-elliptic:}
+  $B(v,v)=\norm{v'}^{2}_{L^{2}(I)}
+   \ge\tfrac12\bigl(\norm{v'}^{2}_{L^{2}(I)}+\norm{v}^{2}_{L^{2}(I)}\bigr)
+   =\tfrac12\norm{v}^{2}_{\Vsp}$, using \textbf{Poincar\'e}
+  $\norm{v}_{L^{2}(I)}\le\norm{v'}_{L^{2}(I)}$ for $v\in H^{1}_{0}(I)$; so
+  $\beta_{*}=\tfrac12$. \cmark
+\item \textbf{$L$ continuous:}
+  $|L(v)|\le\norm{f}_{L^{2}(I)}\norm{v}_{L^{2}(I)}
+   \le\norm{f}_{L^{2}(I)}\norm{v}_{\Vsp}$, so
+  $\widetilde{L}=\norm{f}_{L^{2}(I)}$. \cmark
+\end{enumerate}
+
+\noindent
+$\Rightarrow$ existence, uniqueness and boundedness, and C\'ea's lemma gives
+$\norm{u-\uh}_{\Vsp}\le2\norm{u-v}_{\Vsp}$ for all $v\in\Vh$, hence
+\begin{equation}\label{eq:l13cgrates}
+  \text{CG}(1):\ \norm{u-\uh}_{\Vsp}\le c_{1}\norm{h\,u''}_{L^{2}(I)},
+  \qquad
+  \text{CG}(2):\ \norm{u-\uh}_{\Vsp}\le c_{2}\norm{h^{2}u'''}_{L^{2}(I)} .
+\end{equation}
+
+\begin{intuition}[Poincar\'e is what makes (VE) true]
+(VE) asks $B(v,v)\ge\beta_{*}\norm{v}^{2}_{\Vsp}$, but $B(v,v)$ only sees
+$v'$, while $\norm{v}^{2}_{\Vsp}$ also contains $v$ itself. Those are only
+comparable because of Poincar\'e, which says a function pinned to zero at the
+boundary cannot be large without having a large derivative. Remove the boundary
+condition --- a free--free bar --- and Poincar\'e fails for constants,
+$\beta_{*}=0$, and $\bm{A}$ becomes singular. The rigid-body mode shows up as
+the failure of exactly this one inequality.
+\end{intuition}
+
+% ==================================================================
+\section*{Part III --- two dimensions}
+% ==================================================================
+\subsection*{The 2D Poisson equation}
+
+\begin{equation}\label{eq:l132dpoisson}
+  -\lap u=-u_{,xx}-u_{,yy}=f \ \text{ on } \Om\subset\R^{2},
+  \qquad u=0 \text{ on } \dOm .
+\end{equation}
+
+Multiply by a test function $v$ and integrate over $\Om$:
+\begin{equation}\label{eq:l132dmult}
+  -\iint_{\Om}v\,\lap u\dx\dd y=\iint_{\Om}f v\dx\dd y .
+\end{equation}
+
+\noindent
+\textbf{Note (product rule).}
+$\grad\!\cdot\!(v\grad u)=\grad v\cdot\grad u+v\,\lap u$, so
+\begin{equation}\label{eq:l132dprod}
+  -\iint_{\Om}v\,\lap u\dx\dd y
+   =\iint_{\Om}\grad u\cdot\grad v\dx\dd y
+   -\iint_{\Om}\grad\!\cdot\!(v\grad u)\dx\dd y .
+\end{equation}
+By the \textbf{divergence theorem},
+\begin{equation}\label{eq:l13divthm}
+  \iint_{\Om}\grad\!\cdot\!(v\grad u)\dx\dd y
+   =\oint_{\dOm}v\,\grad u\cdot\nn\,\dd s,
+  \qquad \nn=\text{outward unit normal to } \dOm .
+\end{equation}
+Assuming $v=0$ on $\dOm$, the boundary integral vanishes and
+\begin{equation}\label{eq:l132dweak}
+  \iint_{\Om}\grad u\cdot\grad v\dx\dd y=\iint_{\Om}f v\dx\dd y .
+\end{equation}
+
+\noindent
+So
+\begin{equation}\label{eq:l132dV}
+  \Vsp=\Honez=\Bigl\{v:\ \iint_{\Om}\bigl[v^{2}+\|\grad v\|^{2}\bigr]\dx\dd y<\infty,
+  \ \ v=0 \text{ on } \dOm\Bigr\},
+  \qquad \|\grad v\|^{2}=(v_{,x})^{2}+(v_{,y})^{2},
+\end{equation}
+\begin{equation}\label{eq:l132dBL}
+  B(u,v)\defeq\iint_{\Om}\grad u\cdot\grad v\dx\dd y,
+  \qquad
+  L(v)\defeq\iint_{\Om}f v\dx\dd y .
+\end{equation}
+
+\noindent
+\textbf{Check conditions.}
+\begin{enumerate}[label=\arabic*),leftmargin=2.2em,itemsep=3pt]
+\item \textbf{Symmetric:} $B(u,v)=B(v,u)$. \cmark
+\item \textbf{Continuous / bounded:}
+  $|B(u,v)|\le\norm{\grad u}_{\Ltwo}\norm{\grad v}_{\Ltwo}
+   \le\norm{u}_{\Vsp}\norm{v}_{\Vsp}$, so $\beta^{*}=1$. \cmark
+\item \textbf{$\Vsp$-elliptic:}
+  $B(v,v)=\norm{\grad v}^{2}_{\Ltwo}
+   \ge\tfrac12\bigl(\norm{\grad v}^{2}_{\Ltwo}+\norm{v}^{2}_{\Ltwo}\bigr)$,
+  using the \textbf{multi-dimensional Poincar\'e inequality}
+  \begin{equation}\label{eq:l13poincare2d}
+    \norm{v}_{\Ltwo}\le C\,|v|_{\Hs{1}}=C\norm{\grad v}_{\Ltwo}
+    \qquad\forall\,v\in\Honez ,
+  \end{equation}
+  giving
+  $B(v,v)\ge\tfrac12\min\bigl(\tfrac1{C^{2}},1\bigr)\norm{v}^{2}_{\Vsp}$,
+  \ie $\beta_{*}=\tfrac12\min\bigl(\tfrac1{C^{2}},1\bigr)$, a constant
+  depending only on $\dOm$. \cmark
+\item \textbf{$L$ continuous:}
+  $|L(v)|\le\norm{f}_{\Ltwo}\norm{v}_{\Ltwo}\le\norm{f}_{\Ltwo}\norm{v}_{\Vsp}$,
+  so $\widetilde{L}=\norm{f}_{\Ltwo}$. \cmark
+\end{enumerate}
+
+\begin{intuition}[nothing in Part II needed changing]
+The 2D problem was checked against the \emph{same} four lines as the 1D
+problem, and passed. That is the return on the abstraction: Lax--Milgram gives
+existence and uniqueness, the SPD claim gives the matrix structure, and C\'ea
+gives the error bound --- none of them re-proved. The only genuinely
+two-dimensional work was the divergence theorem in \eqref{eq:l13divthm} and
+finding the right Poincar\'e constant.
+\end{intuition}
+
+% ==================================================================
+\subsection*{CG(1) in 2D: the triangulation}
+
+\textbf{Mesh $\Th$:} subdivide $\Om$ into a finite number of triangles
+$K_{j}$, $j=1,2,\dots,M$, with
+\begin{align}
+  h_{j}&\defeq\text{longest edge of } K_{j}, \label{eq:l13hj}\\
+  h&\defeq\max_{1\le j\le M}h_{j}, \label{eq:l13h}\\
+  \rho_{j}&\defeq\text{diameter of the largest circle inscribed in } K_{j}.
+  \label{eq:l13rhoj}
+\end{align}
+
+\noindent
+\textbf{Defn.} $\Th$ is a \textbf{regular} triangulation if there exists a
+constant $\alpha>0$, \emph{independent of $h$}, such that
+\begin{equation}\label{eq:l13regular}
+  \frac{h_{j}}{\rho_{j}}\le\alpha\qquad\forall\,j .
+\end{equation}
+
+\noindent
+The discrete space is
+\begin{equation}\label{eq:l132dVh}
+  \Vh=\Bigl\{v\in\Hone:\ v\big|_{K_{j}}=a_{j}+b_{j}x+c_{j}y,\ \
+  v\big|_{\dOm}=0\Bigr\},
+\end{equation}
+and C\'ea's lemma gives the error estimate
+\begin{equation}\label{eq:l132derr}
+  \norm{u-\uh}_{\Hs{1}}\le c\,\norm{h\,u}_{\Hs{2}},
+  \qquad
+  |v|^{2}_{\Hs{2}}=\iint_{\Om}\bigl[(v_{,xx})^{2}+2(v_{,xy})^{2}+(v_{,yy})^{2}\bigr]\dx\dd y .
+\end{equation}
+
+\begin{mechanics}[what regularity \eqref{eq:l13regular} is forbidding]
+$h_{j}/\rho_{j}$ is an aspect ratio: longest edge over inscribed-circle
+diameter. Bounding it uniformly forbids \emph{sliver} elements --- long thin
+triangles that collapse towards a line as the mesh is refined. This is the
+same element-quality check a commercial mesher reports, and the reason it
+matters is that the interpolation estimate behind \eqref{eq:l132derr} carries
+$1/\rho_{j}$: let the triangles go slivery and the constant $c$ blows up even
+though $h$ is going to zero.
+\end{mechanics}
+
+% ==================================================================
+\subsection*{The beam, in the abstract language}
+
+The 1D fourth-order problem written as an abstract variational problem:
+\begin{equation}\label{eq:l13beamabs}
+  u^{(iv)}=f \ \text{ in } (0,1),\qquad u(0)=u(1)=u'(0)=u'(1)=0,
+  \qquad \Vsp=H^{2}_{0}(I),\ \ I=(0,1),
+\end{equation}
+\begin{equation}\label{eq:l13beamnorm}
+  \norm{v}_{\Vsp}=\norm{v}_{\Hs{2}[I]}
+   =\Bigl(\int_{0}^{1}\bigl[v^{2}+(v')^{2}+(v'')^{2}\bigr]\dx\Bigr)^{1/2},
+\end{equation}
+\begin{equation}\label{eq:l13beamBL}
+  B(u,v)=(u'',v''),\qquad L(v)=(f,v).
+\end{equation}
+Here $H^{2}_{0}(I)$ means $u=0$ \emph{and} $u'=0$ on the boundary.
+
+\noindent
+\textbf{Check conditions.}
+\begin{enumerate}[label=\arabic*),leftmargin=2.2em,itemsep=3pt]
+\item \textbf{Symmetric:} $(u'',v'')=(v'',u'')$. \cmark
+\item \textbf{Continuous / bounded:}
+  $|B(u,v)|\le\norm{u''}_{L^{2}(I)}\norm{v''}_{L^{2}(I)}
+   \le\norm{u}_{\Vsp}\norm{v}_{\Vsp}$, $\beta^{*}=1$. \cmark
+\item \textbf{$\Vsp$-elliptic:} $B(v,v)=\norm{v''}^{2}_{L^{2}(I)}$, and
+  applying Poincar\'e twice,
+  $\norm{v}_{L^{2}(I)}\le\norm{v'}_{L^{2}(I)}\le\norm{v''}_{L^{2}(I)}$
+  for $v\in H^{2}_{0}(I)$, gives
+  $B(v,v)\ge\tfrac13\bigl(\norm{v}^{2}_{L^{2}}+\norm{v'}^{2}_{L^{2}}
+   +\norm{v''}^{2}_{L^{2}}\bigr)=\tfrac13\norm{v}^{2}_{\Vsp}$,
+  so $\beta_{*}=\tfrac13$. \cmark
+\item \textbf{$L$ continuous:} $\widetilde{L}=\norm{f}_{L^{2}(0,1)}$. \cmark
+\end{enumerate}
+
+\noindent
+\textbf{CG(3) estimate} (C\'ea's lemma):
+\begin{equation}\label{eq:l13cg3}
+  \norm{u-\uh}_{\Hs{2}[(0,1)]}\le c\,\norm{h^{2}u}_{\Hs{4}[(0,1)]},
+  \qquad
+  |v|^{2}_{\Hs{4}[(0,1)]}=\int_{0}^{1}\bigl(v''''\bigr)^{2}\dx .
+\end{equation}
+
+\begin{recall}[this is HW3 Problems 4--5, done abstractly]
+The homework proved $\norm{u-U}_{E}=\mathcal{O}(h^{2})$ by hand, with Galerkin
+orthogonality, Cauchy and the interpolation estimate. \eqref{eq:l13cg3} is the
+same result read straight off C\'ea's lemma with
+$\beta^{*}/\beta_{*}=3$. The hand proof gave a better constant because it used
+the energy norm, in which $\beta^{*}=\beta_{*}$; the abstract route gives the
+same \emph{rate} with less work.
+\end{recall}
+
+% ==================================================================
+\subsection*{The biharmonic equation \hfill {\normalfont\small [12/Oct/26]}}
+
+The 2D plate --- the beam's two-dimensional counterpart:
+\begin{equation}\label{eq:l13biharm}
+  \lap^{2}u=\lap(\lap u)=f
+  \ \Longrightarrow\
+  u_{,xxxx}+2u_{,xxyy}+u_{,yyyy}=f ,
+\end{equation}
+\begin{equation}\label{eq:l13biharmbc}
+  \text{BCs:}\qquad u\big|_{\dOm}=0,\qquad \grad u\cdot\nn\big|_{\dOm}=0 .
+\end{equation}
+
+Multiply by $v$ and integrate, letting $z=\lap u$:
+\begin{align}
+  \iint_{\Om}v\,\lap(\lap u)\dx\dd y&=\iint_{\Om}vf\dx\dd y,\notag\\
+  \iint_{\Om}v\,\lap z\dx\dd y
+   &=-\iint_{\Om}\grad v\cdot\grad z\dx\dd y
+     +\oint_{\dOm}v\,\grad z\cdot\nn\,\dd s ,\label{eq:l13biharmibp}
+\end{align}
+and taking $v=0$, $\grad v\cdot\nn=0$ on $\dOm$,
+\begin{equation}\label{eq:l13biharmweak}
+  B(u,v)=\iint_{\Om}\lap u\,\lap v\dx\dd y,
+  \qquad
+  L(v)=\iint_{\Om}f v\dx\dd y,
+  \qquad
+  \Vsp=H^{2}_{0}(\Om).
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} If $v\in H^{2}_{0}(\Om)$ then
+\begin{equation}\label{eq:l13H2norm}
+  \norm{v}^{2}_{\Hs{2}}=\norm{v}^{2}_{\Ltwo}+\norm{\grad v}^{2}_{\Ltwo}
+   +\norm{v_{,xx}}^{2}_{\Ltwo}+2\norm{v_{,xy}}^{2}_{\Ltwo}
+   +\norm{v_{,yy}}^{2}_{\Ltwo},
+\end{equation}
+and $v\in H^{2}_{0}(\Om)$ means $v=0$, $v_{,x}=0$, $v_{,y}=0$ on $\dOm$.
+
+\noindent
+\textbf{Check conditions.}
+\begin{enumerate}[label=\arabic*),leftmargin=2.2em,itemsep=3pt]
+\item \textbf{Symmetric:} $B(u,v)=B(v,u)$. \cmark
+\item \textbf{Continuous / bounded:}
+  $|B(u,v)|\le\norm{\lap u}_{\Ltwo}\norm{\lap v}_{\Ltwo}
+   \le\norm{u}_{\Vsp}\norm{v}_{\Vsp}$. \cmark
+\item \textbf{$\Vsp$-elliptic:} $B(v,v)=\norm{\lap v}^{2}_{\Ltwo}$, and by a
+  result of \textbf{Girault--Raviart (1981)},
+  \begin{equation}\label{eq:l13girault}
+    \norm{v}_{\Hs{2}}\le C\,\norm{\lap v}_{\Ltwo}
+    \qquad\text{for } v\in H^{2}_{0}(\Om),
+  \end{equation}
+  hence $B(v,v)\ge\tfrac1{C^{2}}\norm{v}^{2}_{\Vsp}$. \cmark
+\item \textbf{$L$ continuous:} $\widetilde{L}=\norm{f}_{\Ltwo}$. \cmark
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\subsubsection*{Conforming FEM for the biharmonic: the Argyris element}
+
+A conforming method needs $\Vh\subset\Vsp=H^{2}_{0}(\Om)$, \ie
+\begin{equation}\label{eq:l13argyrisV}
+  \Vh=\Bigl\{v\in H^{2}(\Om):\
+  v\big|_{K_{j}}=\sum_{\ell+m=0}^{\ell+m\,\le\,5}a^{(\ell m)}_{j}\,x^{(\ell)}y^{(m)},
+  \ \ v\big|_{\dOm}=0,\ \ \grad v\cdot\nn\big|_{\dOm}=0\Bigr\},
+\end{equation}
+a complete quintic in two variables --- \textbf{21 different polynomials} on
+each triangle. The corresponding element is the \textbf{Argyris element
+(1968)}, whose $21$ degrees of freedom per triangle are
+\begin{equation}\label{eq:l13argyrisdofs}
+  \underbrace{u,\ \grad u,\ u_{,xx},\ u_{,xy},\ u_{,yy}}_{6\ \text{per vertex}\ \times\ 3\ \text{vertices}\ =\ 18}
+  \qquad\text{plus}\qquad
+  \underbrace{\grad u\cdot\nn}_{1\ \text{per edge}\ \times\ 3\ \text{edges}\ =\ 3}.
+\end{equation}
+
+\begin{mechanics}[why plates are hard, in one element]
+A conforming plate element must be $C^{1}$ across element boundaries --- the
+2D version of the beam's requirement --- and matching \emph{both} the value and
+the full gradient along a shared edge is far more demanding than matching them
+at a point. The cheapest complete polynomial that can do it is a quintic, which
+is why the Argyris element carries second derivatives as nodal unknowns and
+ends up with $21$ DOFs on a single triangle.
+
+This is also why real plate and shell codes usually do \emph{not} use
+conforming elements: they drop to non-conforming or mixed formulations (and
+give up $\Vh\subset\Vsp$) rather than pay this price.
+\end{mechanics}
+
+% ==================================================================
+\section*{Part IV --- 2D mesh generation}
+% ==================================================================
+\subsection*{Triangulations}
+
+\textbf{Note.} FEM has no inherent restriction on the mesh. The simplest and
+most flexible choice is to use a \textbf{simplex}: 2D triangles, 3D
+tetrahedra.
+
+\medskip\noindent
+\textbf{Note.} A general triangulation in 2D is \textbf{unstructured}, meaning
+grid points do not lie along coordinate lines.
+
+\medskip\noindent
+\textbf{Defn (triangulation).} Let $\Om$ be a 2D domain with polygonal
+boundary $\dOm$. A triangulation $\Th=\{K_{j}\}_{j=1}^{M}$ is a subdivision of
+$\Om$ into $M$ non-overlapping triangles constructed so that no vertex of one
+triangle lies on the edge of another triangle:
+\begin{equation}\label{eq:l13tri}
+  \bigcup_{j=1}^{M}K_{j}=\Om .
+\end{equation}
+Let $X_{h}=\{x_{i}=(x_{i},y_{i})\}_{i=1}^{N}$ denote the set of \textbf{nodes}
+(vertices of the triangles) and $\mathcal{S}_{h}=\{s_{k}\}_{k=1}^{E}$ the
+\textbf{edges}.
+
+\medskip\noindent
+\textbf{Main question (Mesh Generation, Part 1).} Given a collection of points
+in $\R^{2}$ (nodes), how can we connect them to form a triangulation?
+
+% ==================================================================
+\subsection*{Voronoi diagrams}
+
+\textbf{Idea.} Given a finite set of points in $\R^{2}$, assign to each point a
+\emph{region of influence} in such a way that it decomposes $\R^{2}$.
+
+\medskip\noindent
+\textbf{Defn (Voronoi region).} Let $X$ be a collection of $N$ points in
+$\R^{2}$. For each $x_{i}\in X$ the \textbf{Voronoi region} $V_{i}$ is the set
+of points $x\in\R^{2}$ that are at least as close to $x_{i}$ as to any other
+point in $X$:
+\begin{equation}\label{eq:l13voronoi}
+  V_{i}=\bigl\{x\in\R^{2}:\ \|x-x_{i}\|\le\|x-x_{j}\|\ \ \forall\,x_{j}\in X\bigr\} .
+\end{equation}
+Consider the half-plane
+\begin{equation}\label{eq:l13halfplane}
+  H_{ij}=\bigl\{x\in\R^{2}:\ \|x-x_{i}\|\le\|x-x_{j}\|\bigr\} .
+\end{equation}
+The Voronoi region of $x_{i}$ is the convex intersection of the half-planes
+$H_{ij}$ for all $j\neq i$; therefore $V_{i}$ is a convex polygonal region
+(possibly unbounded).
+
+\medskip\noindent
+\textbf{Notes.}
+\begin{enumerate}[label=(\arabic*),leftmargin=2.4em,itemsep=2pt]
+\item Each point in $\R^{2}$ has at least one nearest point in $X$, so every
+  $x\in\R^{2}$ lies in at least one Voronoi region.
+\item Two Voronoi regions lie on opposite sides of a perpendicular bisector;
+  two Voronoi regions do not share any interior points. If a point belongs to
+  more than one region, it must lie on the boundary.
+\item Voronoi regions for a given $X$ cover $\R^{2}$.
+\item Voronoi regions together with edges and vertices form the
+  \textbf{Voronoi diagram} of $X$.
+\item For a given $X$, the Voronoi diagram is unique.
+\end{enumerate}
+
+% ==================================================================
+\subsection*{Delaunay triangulation}
+
+\textbf{Defn (Delaunay partition).} Let $X\subset\R^{2}$ be a set of $N$
+points and let $V$ be the Voronoi diagram. The \textbf{Delaunay partition} is
+obtained by creating an edge between two points in $X$ \emph{if and only if}
+their Voronoi regions share a boundary.
+
+\medskip\noindent
+\textbf{Generic situation:} 3 points of $X$ share a common vertex, so a
+triangle is formed.
+
+\medskip\noindent
+\textbf{Degenerate situation:} 4 or more points share a common Voronoi vertex
+--- \ie they are co-circular.
+
+\medskip\noindent
+\textbf{Note.} Degeneracies can always be converted to a triangulation (a
+square is split by either diagonal).
+
+\medskip\noindent
+\textbf{Defn (Delaunay triangulation).} The Delaunay triangulation $\Th$ is the
+Delaunay partition together with some strategy to convert degenerate elements
+into triangles.
+
+\medskip\noindent
+\textbf{Properties.}
+\begin{enumerate}[label=(\arabic*),leftmargin=2.4em,itemsep=2pt]
+\item The Voronoi diagram and the Delaunay triangulation form a \textbf{duality}.
+\item For a given $X\subset\R^{2}$, $V$ is unique, and $\Th$ is unique up to
+  degeneracies.
+\item $\Th$ contains $\mathcal{O}(N)$ triangles.
+\item $\Th$ \textbf{maximises the minimum angle}.
+\item A circle circumscribing any triangle in $\Th$ does not contain any other
+  point of $X$.
+\end{enumerate}
+
+\begin{mechanics}[property (4) is the one you care about]
+``Maximises the minimum angle'' is exactly the regularity condition
+\eqref{eq:l13regular} in disguise: of all possible triangulations of the same
+point set, Delaunay is the one that comes closest to avoiding slivers. That is
+why essentially every unstructured mesher starts from a Delaunay triangulation
+--- it is not merely convenient, it is optimal for the constant in the
+interpolation estimate.
+
+Property (5), the empty-circumcircle condition, is the practical test a code
+uses to check or repair a mesh.
+\end{mechanics}
+
+% ------------------------------------------------------------------
+\subsubsection*{In Python}
+
+\begin{enumerate}[label=\arabic*),leftmargin=2.2em,itemsep=3pt]
+\item Create a list of points in $\R^{2}$: \texttt{p[0:N, 0:2]}, where the
+  first index is the point index and the second the coordinate $(x,y)$.
+\item Create $\Th$ (Delaunay triangulation):
+\begin{quote}\ttfamily
+import scipy.spatial as sp\\
+t = sp.Delaunay(p).simplices
+\end{quote}
+\item Plot the mesh:
+\begin{quote}\ttfamily
+import numpy as np\\
+import matplotlib.pyplot as plt\\
+plt.triplot(p[:,0], p[:,1], t, facecolors=np.zeros(N), edgecolors='k')
+\end{quote}
+\item Plot a function defined on the nodes:
+\begin{quote}\ttfamily
+U = ufunc(p)\\
+plt.tripcolor(p[:,0], p[:,1], t, U, shading='flat', cmap='inferno')
+\end{quote}
+\end{enumerate}
+
+\noindent
+\textbf{What is \texttt{t}?} $N=$ number of nodes, $M=$ number of triangles;
+\texttt{t} is an $M\times3$ array of integers, where \texttt{t[j][i]} gives, for
+triangle $j$, the node index $i\in\{0,1,2\}$.
+
+\medskip\noindent
+\textbf{Note (area of a triangle).} For vertices $(x_{0},y_{0})$,
+$(x_{1},y_{1})$, $(x_{2},y_{2})$, set
+$\underline{v}_{1}=(x_{1}-x_{0},\,y_{1}-y_{0},\,0)$ and
+$\underline{v}_{2}=(x_{2}-x_{0},\,y_{2}-y_{0},\,0)$; then
+\begin{equation}\label{eq:l13area}
+  \text{area}=\tfrac12\bigl\|\underline{v}_{1}\times\underline{v}_{2}\bigr\| .
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} Delaunay in C: \texttt{http://www.qhull.org}.
+
+% ==================================================================
+\subsection*{Mesh generation, Part 2: representing $\Om$ and $\dOm$}
+
+\textbf{Idea.} Describe the domain \emph{implicitly} using a \textbf{level-set
+function}.
+
+\medskip\noindent
+\textbf{Ex.} $\phi(x)=\|x\|-R$, where $R>0$. Then
+\begin{equation}\label{eq:l13levelset}
+  \dOm=\bigl\{x\in\R^{2}:\ \phi(x)=0\bigr\}
+      =\bigl\{x\in\R^{2}:\ \|x\|=R\bigr\},
+  \qquad
+  \Om=\bigl\{x\in\R^{2}:\ \phi(x)<0\bigr\},
+\end{equation}
+a circle of radius $R$ centred at $(0,0)$.
+
+\medskip\noindent
+\textbf{Note (convention).}
+\begin{equation}\label{eq:l13conv}
+  \{\phi=0\}\ \text{is the boundary},\qquad
+  \{\phi<0\}\ \text{is the interior of } \Om,\qquad
+  \{\phi>0\}\ \text{is the exterior of } \Om .
+\end{equation}
+
+\medskip\noindent
+\textbf{Note.} For a given $\dOm$ there are many level-set functions; \eg
+$\phi(x)=\|x\|^{p}-R^{p}$ for any positive integer $p$ describes the disc of
+radius $R$ centred at $(0,0)$.
+
+\medskip\noindent
+\textbf{Boolean operations.}
+\begin{align}
+  \phi&=\min(\phi_{1},\phi_{2}) &&\text{is the \textbf{union} operation: }
+    \Om=\Om_{1}\cup\Om_{2},\label{eq:l13union}\\
+  \phi&=\max(\phi_{1},\phi_{2}) &&\text{is the \textbf{intersection}
+    operation: } \Om=\Om_{1}\cap\Om_{2}.\label{eq:l13inter}
+\end{align}
+
+\begin{intuition}[why min is union]
+With the sign convention \eqref{eq:l13conv}, ``inside'' means negative. A point
+is in $\Om_{1}\cup\Om_{2}$ when it is inside \emph{at least one} of them, \ie
+when \emph{at least one} $\phi_{i}$ is negative --- which is exactly
+$\min(\phi_{1},\phi_{2})<0$. Intersection needs \emph{both} negative, hence
+$\max$. CAD solid modelling is built on these two lines.
+\end{intuition}
+
+\begin{dictionary}[mesh generation]
+level-set function $\phi$ & implicit CAD geometry; $\phi<0$ is material\\
+Voronoi region & the territory nearest a given node\\
+Delaunay triangulation & the dual mesh; the ``best'' triangles for a point set\\
+$h_{j}/\rho_{j}\le\alpha$ & element aspect-ratio / sliver check\\
+\texttt{scipy.spatial.Delaunay} & what a mesher calls underneath\\
+\end{dictionary}
+
+\todoq{The scan's \texttt{plt.triplot} call is written with both
+\texttt{facecolors} and \texttt{edgecolors} arguments, which belong to
+\texttt{tripcolor}, not \texttt{triplot}. Transcribed as written; worth
+checking the lecturer's actual code before relying on it.}

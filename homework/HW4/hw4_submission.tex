@@ -1,0 +1,1011 @@
+% ============================================================
+%  hw4_sol.tex   --  MATH 6660, Homework 4, Problem 4(a)-(c).
+%
+%  RULE: nothing in this document goes beyond the class lectures.
+%  Every step is tagged with the lecture it comes from.  Anything that
+%  would go outside them is wrapped in \outside{}{} and prints as a red
+%  labelled box, so it is visible in the PDF.
+%
+%  Problems 1-3 and 4(d) (the computations) are in hw4_sol_numerical.tex.
+%  Build: pdflatex hw4_sol.tex   (twice, for cross-references)
+% ============================================================
+\documentclass[11pt]{article}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor={blue!45!black},pdfborder={0 0 0}]{hyperref}
+\usepackage{pdfcomment}
+\usepackage{xspace}
+
+% every figure and table carries a number and sits where it was written
+\captionsetup{font=small,labelfont=bf,justification=justified,
+              singlelinecheck=false,skip=6pt,hypcap=false}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+\newcommand{\dxdy}{\,\mathrm{d}x\,\mathrm{d}y}
+\newcommand{\ds}{\,\mathrm{d}s}
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\abs}[1]{\lvert #1\rvert}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\ie}{i.e.\@\xspace}
+\newcommand{\eg}{e.g.\@\xspace}
+\newcommand{\Om}{\Omega}
+\newcommand{\dOm}{\partial\Omega}
+\newcommand{\grad}{\nabla}
+\newcommand{\lap}{\Delta}
+\newcommand{\Iint}{\iint_{\Om}}
+\newcommand{\Vsp}{V}
+\newcommand{\nn}{\bm{n}}
+\setlength{\parindent}{0pt}
+
+% ---- provenance tag: which lecture a step comes from ------------------
+\newcommand{\src}[1]{{\small\color{black!55}\textsf{[#1]}}}
+
+% ---- anything outside the lectures is boxed and labelled -------------
+\newcommand{\outside}[2]{%
+  \par\smallskip\noindent
+  \fcolorbox{red!65!black}{red!4}{%
+    \parbox{0.955\linewidth}{\small
+      \textbf{\color{red!65!black}NOT FROM LECTURE --- #1}\par\smallskip #2}}%
+  \par\smallskip}
+
+% ---- bullets ---------------------------------------------------------
+\newlist{steps}{itemize}{1}
+\setlist[steps]{label=\textbullet, leftmargin=1.25em, topsep=3pt,
+                itemsep=4pt, parsep=0pt}
+
+% ---- hover tooltips on cross-references ------------------------------
+\makeatletter
+\newcommand{\settip}[2]{\expandafter\gdef\csname femtip@#1\endcsname{#2}}
+\newcommand{\gettip}[1]{%
+  \ifcsname femtip@#1\endcsname\csname femtip@#1\endcsname\else equation \ref{#1}\fi}
+\newcommand{\eqr}[1]{\pdftooltip{\eqref{#1}}{\gettip{#1}}}
+\makeatother
+
+\settip{eq:pde}{Poisson problem: minus the Laplacian of u equals f on the square, u equals g on its boundary}
+\settip{eq:ibp}{After the product rule and the divergence theorem: gradient-gradient integral minus the boundary integral of v times the normal derivative equals the load integral}
+\settip{eq:weak}{Weak form: the integral of grad u dot grad v equals the integral of f v}
+\settip{eq:spaces}{Trial set V_g: finite energy and v equals g on the boundary. Test space V_0: finite energy and v equals 0 on the boundary}
+\settip{eq:lifted}{Lifted problem: B(w,v) equals L-tilde(v) for all v in V_0, with u = w + G}
+\settip{eq:poinc}{Poincare on the square: the L2 norm squared of v is at most 4 times the L2 norm squared of grad v}
+\settip{eq:ke}{Element stiffness matrix of the bilinear square, one sixth of 4,-1,-2,-1 and its cyclic shifts}
+\settip{eq:row}{Assembled equation for interior node (i,j): one third of 8 U_ij minus its eight neighbours equals b_ij}
+\settip{eq:shapes}{The four bilinear shape functions, (1-xi)(1-eta), xi(1-eta), xi eta, (1-xi) eta}
+\usepackage{amsmath,amssymb}
+\usepackage{fancyvrb}
+\newcommand{\problem}[2]{%
+  \section*{Problem #1}%
+  \renewcommand{\theequation}{#2.\arabic{equation}}%
+  \setcounter{equation}{0}}
+\begin{document}
+
+
+\begin{center}
+  {\large\bfseries MATH 6660 --- Homework 4}\\[2pt]
+  {\small Fall 2026}
+\end{center}
+
+
+
+% ==================================================================
+\problem{1}{1}
+
+\textbf{Problem.} Download the PyDistMesh mesh generator.  You can find all the
+necessary links from the Math 6660 Canvas page.
+
+\begin{steps}
+\item Downloaded from Canvas.  PyDistMesh is B.~Froehle's Python port (2012)
+      of P.-O.~Persson's \textsc{DistMesh} (2004).  Nothing in it was edited.
+\end{steps}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\footnotesize
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.69\linewidth}@{}}
+\toprule
+file & role\\
+\midrule
+\texttt{distmesh2d.py} & \texttt{p,t = distmesh2d(fd,fh,h0,bbox,pfix)}: level set
+  \texttt{fd}, relative size \texttt{fh}, edge length \texttt{h0}; returns
+  nodes \texttt{p} ($N\times2$) and triangles \texttt{t} ($M\times3$)\\
+\texttt{distance\_functions.py} & level sets (\texttt{dcircle},
+  \texttt{drectangle}, \dots) and Booleans: \texttt{dunion} $=\min$,
+  \texttt{dintersect} $=\max$, \texttt{ddiff}$(d_1,d_2)=\max(d_1,-d_2)$\\
+\texttt{boundary.py} & \texttt{bnd2d}: re-triangulates, marks nodes with
+  $\abs{\phi}\le10^{-8}$ as boundary and puts them last, returns the areas\\
+\texttt{assemble.py} & the cG(1) code used in Problem 3\\
+\texttt{example1.py}, \texttt{example2.py}, \texttt{poisson\_example.py} &
+  unit disc; square with a hole, graded; $-\lap u=1$ on the latter\\
+\bottomrule
+\end{tabular}
+\captionof{table}{The PyDistMesh bundle as downloaded (plus two helper files,
+\texttt{utils.py} and \texttt{mlcompat.py}).}
+\label{tab:p1files}
+\end{minipage}
+\end{center}
+
+\subsection*{Step 1 --- what in the code is the lecture
+  \ \src{Lecture 13, Part IV, eqs.~(1.278)--(1.282)}}
+
+\begin{steps}
+\item \texttt{fd} is the lecture's level set $\phi$: $\dOm=\{\phi=0\}$,
+      $\Om=\{\phi<0\}$.  The Booleans are the lecture's $\min$ (union) and
+      $\max$ (intersection); a set difference is $\max(\phi_1,-\phi_2)$.
+\item Points become triangles by the lecture's two Python lines: a
+      Delaunay triangulation from \texttt{scipy.spatial}, then only the
+      triangles whose centroid has $\phi<0$ are kept.
+\item Areas are the lecture's $\tfrac12\abs{\underline v_1\times\underline v_2}$.
+      Boundary nodes go last, so $u=0$ is imposed by assembling only the
+      first \texttt{num\_int\_nodes} rows and columns.
+\end{steps}
+
+\outside{where the nodes come from}{The lecture triangulates a given point set.
+\textsc{DistMesh} generates the points: a lattice of spacing $h_0$ cut to
+$\phi<0$, then relaxed by treating every Delaunay edge as a compressed bar of
+rest length $1.2\,\texttt{fh}$, re-triangulating as nodes move and projecting
+escaped nodes back onto $\phi=0$.  Persson and Strang, \emph{SIAM Review} 46
+(2004).}
+
+\subsection*{Step 2 --- it runs}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[width=0.86\linewidth]{hw4_p1_examples.pdf}
+\captionof{figure}{The three bundled examples, run unchanged.  Interior nodes
+blue, boundary nodes brown.  Right: the cG(1) solution of $-\lap u=1$, $u=0$
+on $\dOm$.}
+\label{fig:p1}
+\end{minipage}
+\end{center}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\input{hw4_p1_table}
+\captionof{table}{The three runs.  Exact area: $\pi$ for the disc,
+$4-\pi/4$ for the square with a hole of radius $1/2$.  Last column: the
+lecture's regularity ratio (1.260), longest edge over inscribed diameter; an
+equilateral triangle gives $\sqrt3=1.73$.}
+\label{tab:p1runs}
+\end{minipage}
+\end{center}
+
+\begin{steps}
+\item Areas agree to $0.2\%$; the disc comes out smaller and the holed
+      square larger, since chords cut a sliver off a convex boundary and add
+      one at a concave one.  $\max_j h_j/\rho_j\le2.83$: no slivers.
+\end{steps}
+
+% ==================================================================
+\problem{2}{2}
+
+\textbf{Problem.} Use this code to generate a mesh for a star-shaped region
+whose boundary is the zero contour of $\phi(r,\theta)=r-0.75-0.25\sin(5\theta)$.
+
+\subsection*{Step 1 --- the level set in $x,y$
+  \ \src{Lecture 13, eqs.~(1.279)--(1.280)}}
+
+\begin{steps}
+\item \texttt{fd} receives Cartesian points, so with $r=\sqrt{x^{2}+y^{2}}$,
+      $\theta=\operatorname{atan2}(y,x)$:
+\begin{equation}\label{eq:phi}
+  \begin{gathered}
+  \phi(x,y)=\sqrt{x^{2}+y^{2}}-0.75-0.25\sin\bigl(5\operatorname{atan2}(y,x)\bigr),\\
+  \phi<0\iff r<R(\theta):=0.75+0.25\sin5\theta .
+  \end{gathered}
+\end{equation}
+      $0.5\le R\le1$: five tips at $r=1$, five valleys at $r=0.5$; the box
+      $(-1,1)^{2}$ contains $\Om$.
+\begin{Verbatim}[fontsize=\small,xleftmargin=1em]
+fd = lambda p: np.sqrt(p[:,0]**2 + p[:,1]**2) - 0.75 \
+               - 0.25*np.sin(5*np.arctan2(p[:,1], p[:,0]))
+p, t = dm.distmesh2d(fd, distfunc.huniform, h0, (-1,-1,1,1))
+p, t, nin, nbd, area = bnd.bnd2d(fd, p, t, -1.0, -1.0, 1.0, 1.0)
+\end{Verbatim}
+\item Exact area, to check the mesh against:
+\begin{equation}\label{eq:area}
+  \abs{\Om}=\int_{0}^{2\pi}\!\!\int_{0}^{R(\theta)}r\,\mathrm{d}r\,\mathrm{d}\theta
+  =\frac12\int_{0}^{2\pi}\Bigl[0.75^{2}+1.5\cdot0.25\underbrace{\sin5\theta}_{\int=\,0}
+   +0.25^{2}\underbrace{\sin^{2}5\theta}_{\int=\,\pi}\Bigr]\mathrm{d}\theta
+  =\frac{19\pi}{32}=1.86532 .
+\end{equation}
+\end{steps}
+
+\subsection*{Step 2 --- the boundary nodes, and a fix}
+
+\begin{steps}
+\item \texttt{bnd2d} calls a node \emph{boundary} only if
+      $\abs{\phi}\le10^{-8}$, and Problem 3's solver sets $u=0$ only there.
+      So every node on a boundary edge (an edge of one triangle only) must
+      pass that test.
+\item \textbf{It does not.}  At $h_0=0.05$ only $72$ of the $138$ nodes on
+      boundary edges pass (Table~\ref{tab:p2}, last column).  The $66$ others
+      sit just inside, $-1.0\times10^{-4}\le\phi<-10^{-8}$, all on the inner
+      part of the boundary, $r\le0.78$, around the five valleys
+      (Figure~\ref{fig:p2}, red).
+\item \textbf{Why.}  \texttt{distmesh2d} moves a node that left $\Om$ back by
+      $\bm p\leftarrow\bm p-\phi\,\grad\phi/\abs{\grad\phi}^{2}$, repeated
+      \emph{while $\phi>10^{-14}$}.  One step lands exactly on $\phi=0$ only if
+      $\phi$ is linear along $\grad\phi$, as for $\phi=r-1$ in the bundle's
+      examples.  Here
+\begin{equation}\label{eq:gradphi}
+  \grad\phi=\underbrace{\bm e_{r}}_{\partial\phi/\partial r}
+           \;-\;\underbrace{\frac{1.25\cos5\theta}{r}\,\bm e_{\theta}}_{\frac1r\partial\phi/\partial\theta}
+\end{equation}
+      is not radial, so a step can land inside, and then the loop stops with
+      $\phi<0$.
+\item \textbf{Fix} (the bundle is not edited).  Before \texttt{bnd2d}, move
+      every node on a boundary edge radially onto the curve:
+\begin{equation}\label{eq:snap}
+  (x,y)\;\leftarrow\;R(\theta)\,(\cos\theta,\sin\theta),
+  \qquad\text{so}\quad \phi=R(\theta)-R(\theta)=0 .
+\end{equation}
+      The nodes move at most $10^{-4}\ll h_{0}$.  Afterwards every boundary
+      node passes (Table~\ref{tab:p2}).
+\end{steps}
+
+\subsection*{Step 3 --- the mesh
+  \ \src{Lecture 13, eq.~(1.260): regular triangulation}}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[width=0.97\linewidth]{hw4_p2_mesh.pdf}
+\captionof{figure}{The star mesh at $h_{0}=0.05$, after the fix
+\eqref{eq:snap}.  Blue: interior nodes; brown: boundary nodes; the curve is
+$\phi=0$.  Red circles: the boundary nodes that \texttt{bnd2d} classed as
+interior before the fix.}
+\label{fig:p2}
+\end{minipage}
+\end{center}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\small\setlength{\tabcolsep}{4pt}
+\input{hw4_p2_table}
+\captionof{table}{Star meshes.  Exact area $19\pi/32=1.86532$
+\eqref{eq:area}.  Last column: nodes \texttt{bnd2d} marks as boundary, out of
+the nodes on boundary edges, before and after \eqref{eq:snap}.}
+\label{tab:p2}
+\end{minipage}
+\end{center}
+
+\begin{steps}
+\item The area error falls from $0.3\%$ to $0.02\%$ as $h_{0}$ goes from
+      $0.1$ to $0.025$.
+\item $\max_{j}h_{j}/\rho_{j}\le2.57$ on every mesh (equilateral: $1.73$):
+      regular in the sense of (1.260), no slivers in the valleys.
+\end{steps}
+
+% ==================================================================
+\problem{3}{3}
+
+\textbf{Problem.} Use the CG(1) method developed in class and provided on the
+Math 6660 Canvas page to solve $-u_{,xx}-u_{,yy}=1$ in $\Om$, $u=0$ on $\dOm$,
+on the star of Problem 2.
+
+\subsection*{Step 1 --- the method
+  \ \src{Lecture 13, eqs.~(1.236) and (1.253)--(1.255)}}
+
+\begin{steps}
+\item Weak form: find $u\in H^{1}_{0}(\Om)$ with
+      $\iint_{\Om}\grad u\cdot\grad v\dxdy=\iint_{\Om}f v\dxdy$ for all $v$,
+      $f=1$.
+\item $V_{h}$: continuous, linear on each triangle of Problem 2, zero at the
+      boundary nodes.  Basis: the hat $\varphi_{i}$ of each interior node.
+      $U=\sum_{i}\xi_{i}\varphi_{i}$ and
+      $\bm A\bm\xi=\bm b$ with $A_{ij}=\iint\grad\varphi_{i}\cdot\grad\varphi_{j}$,
+      $b_{j}=\iint f\varphi_{j}$.
+\end{steps}
+
+\subsection*{Step 2 --- what \texttt{assemble.py} computes, triangle by triangle}
+
+\begin{steps}
+\item On a triangle $K$ with vertices $(x_{l},y_{l})$, $l=1,2,3$, the hat of
+      vertex $k$ is $a_{k}+b_{k}x+c_{k}y$ with value $\delta_{kl}$ at vertex
+      $l$:
+\begin{equation}\label{eq:hatK}
+  \underbrace{\begin{bmatrix}1&x_{1}&y_{1}\\1&x_{2}&y_{2}\\1&x_{3}&y_{3}\end{bmatrix}}_{\bm M}
+  \begin{bmatrix}a_{k}\\b_{k}\\c_{k}\end{bmatrix}=\bm e_{k}
+  \quad\Longrightarrow\quad
+  (a_{k},b_{k},c_{k})^{T}=\text{column }k\text{ of }\bm M^{-1},
+\end{equation}
+      and $\grad\varphi_{k}=(b_{k},c_{k})$ on $K$.
+\item The gradients are constant on $K$, so the stiffness integral is exact:
+\begin{equation}\label{eq:AK}
+  \iint_{K}\grad\varphi_{j}\cdot\grad\varphi_{k}\dxdy=\abs{K}\,(b_{j}b_{k}+c_{j}c_{k}) .
+\end{equation}
+\item The load uses the vertex rule, Lecture 4's trapezoidal rule on a
+      triangle:
+\begin{equation}\label{eq:bK}
+  \iint_{K}f\varphi_{k}\dxdy\approx\frac{\abs{K}}{3}\sum_{l=1}^{3}f(x_{l},y_{l})\,
+  \underbrace{\varphi_{k}(x_{l},y_{l})}_{\delta_{kl}}=\frac{\abs{K}}{3}\,f(x_{k},y_{k}) .
+\end{equation}
+      For $f\equiv1$ it is exact.  $\varphi_{k}$ is linear, so its mean over
+      $K$ is its value at the centroid, the average of the vertex values,
+      $(1+0+0)/3$.
+\item Only nodes with index below \texttt{num\_int\_nodes} get a row and a
+      column: $u=0$ is built into $V_{h}$.  The assembled $\bm A$ is
+      symmetric to round-off ($\max\abs{\bm A-\bm A^{T}}=0$).
+\end{steps}
+
+\subsection*{Step 3 --- check on a domain with a known answer}
+
+\begin{steps}
+\item Unit disc: $u=\tfrac14(1-x^{2}-y^{2})$ has $u_{,xx}=u_{,yy}=-\tfrac12$, so
+      $-\lap u=1$, and $u=0$ at $r=1$.  Same pipeline, no fix needed: for
+      $\phi=r-1$ every boundary node passes.
+\end{steps}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\small
+\input{hw4_p3_disc_table}
+\captionof{table}{The Canvas cG(1) code on the unit disc, $-\lap u=1$:
+largest nodal error against $\tfrac14(1-x^{2}-y^{2})$.  It falls as
+$h_{0}^{2}$.}
+\label{tab:p3disc}
+\end{minipage}
+\end{center}
+
+\subsection*{Step 4 --- the star}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[width=0.5\linewidth]{hw4_p3_solution.pdf}
+\captionof{figure}{cG(1) solution of $-\lap u=1$, $u=0$ on the star,
+$h_{0}=0.025$ ($3167$ unknowns), with ten contours.  Cross: the largest nodal
+value.}
+\label{fig:p3}
+\end{minipage}
+\end{center}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\small
+\input{hw4_p3_table}
+\captionof{table}{The star under refinement.  ``Raw mesh'': the same nodes
+without the fix \eqref{eq:snap} of Problem 2.}
+\label{tab:p3}
+\end{minipage}
+\end{center}
+
+\begin{steps}
+\item $\max U=0.0927$, at the node nearest the centre --- where the five-fold
+      symmetry puts it --- and stable to three digits from $h_{0}=0.05$.
+\item Without the fix, $\max U\approx0.23$: the nodes missed in Problem 2 are
+      left free, so along the valleys the code imposes no condition instead
+      of $u=0$.  The solution is then wrong.
+\end{steps}
+
+\medskip
+\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{Result.}  On the star, $\max u\approx0.0927$ at the centre and
+$\iint_{\Om}u\dxdy\approx0.0676$ (Table~\ref{tab:p3}, Figure~\ref{fig:p3}).}}
+
+\medskip
+{\small\color{black!60}\textbf{Mechanics reading.}  A membrane of unit tension
+under unit pressure, rim clamped.  The disc inscribed in the star ($r=0.5$)
+deflects $1/16=0.0625$ at its centre, the circumscribed disc ($r=1$) $1/4$;
+the star sits between, at $0.0927$.  The raw-mesh $0.23$ is almost the
+circumscribed value: a membrane released along its valleys.}
+
+% ==================================================================
+
+\newpage
+\vspace{4pt}
+
+{\small\color{black!60}
+\textbf{Relation to the lectures.}  Lecture 13, Part III, does exactly this
+problem with $u=0$ on $\dOm$: product rule, divergence theorem, $V=H^{1}_{0}$,
+and the four Lax--Milgram checks with a Poincar\'e constant left unnamed.  Two
+things change here.  The boundary value is $g\neq0$, which is Lecture 5's
+nonhomogeneous Dirichlet case (trial set $\neq$ test space, lifting).  And the
+elements are squares with the bilinear interpolant the problem gives; their
+basis turns out to be products of Lecture 4's 1D hats.  The Poincar\'e
+constant for the square is computed by Lecture 8's 1D argument.}
+
+\vspace{4pt}
+
+% ==================================================================
+\problem{4(a)}{4a}
+
+\textbf{Problem.} Recast this problem as a variational problem.  Clearly state
+the test and trial function spaces.
+
+\medskip
+The strong problem is
+\begin{equation}\label{eq:pde}
+  -\grad\cdot\grad u=-u_{,xx}-u_{,yy}=f(x,y)\quad\text{in } \Om=(-1,1)\times(-1,1),
+  \qquad u=g\quad\text{on } \dOm .
+\end{equation}
+
+% ------------------------------------------------------------------
+\subsection*{Step 1 --- multiply by $v$, integrate, move one derivative
+  \ \src{Lecture 13, Part III: product rule, then divergence theorem}}
+
+\begin{steps}
+\item Multiply \eqr{eq:pde} by a test function $v$ and integrate over $\Om$:
+\begin{equation}\label{eq:mult}
+  -\Iint v\,\lap u\dxdy=\Iint f v\dxdy .
+\end{equation}
+\item Product rule, $\grad\cdot(v\grad u)=\grad v\cdot\grad u+v\,\lap u$, so the
+      left side of \eqref{eq:mult} is
+\begin{equation}\label{eq:prod}
+  -\Iint v\,\lap u\dxdy=\Iint\grad u\cdot\grad v\dxdy-\Iint\grad\cdot(v\grad u)\dxdy .
+\end{equation}
+\item Divergence theorem on the last term, $\nn$ the outward unit normal:
+      $\Iint\grad\cdot(v\grad u)\dxdy=\oint_{\dOm}v\,\grad u\cdot\nn\ds$.  Put
+      this into \eqref{eq:prod} and \eqref{eq:prod} into \eqref{eq:mult}:
+\begin{equation}\label{eq:ibp}
+  \Iint\grad u\cdot\grad v\dxdy
+  \;-\;\oint_{\dOm}v\,\underbrace{\grad u\cdot\nn}_{\text{normal flux, not given}}\ds
+  \;=\;\Iint f v\dxdy .
+\end{equation}
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 2 --- kill the boundary term
+  \ \src{Lecture 5: Dirichlet $=$ essential, the test function vanishes there}}
+
+\begin{steps}
+\item On all four sides the data is the \emph{value} $u=g$.  The flux
+      $\grad u\cdot\nn$ there is not known --- it is the reaction to holding $u$
+      at $g$.  So the boundary integral in \eqr{eq:ibp} cannot be evaluated.
+\item The only way to remove it is to demand $v=0$ on $\dOm$.  Then
+      \eqr{eq:ibp} becomes
+\begin{equation}\label{eq:weak}
+  \boxed{\;\Iint\grad u\cdot\grad v\dxdy=\Iint f v\dxdy\;}
+\end{equation}
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 3 --- the trial set and the test space
+  \ \src{Lecture 5: $u(0)=\alpha\neq0$ gives trial $\Vsp\neq$ test $\Vsp_{0}$;
+         Lecture 13, eq.~(1.254), for the 2D integrals}}
+
+\begin{steps}
+\item \eqr{eq:weak} needs $\Iint\abs{\grad u}^{2}$ and $\Iint\abs{\grad v}^{2}$
+      finite, so both spaces are built on
+      $\Iint\bigl[v^{2}+\abs{\grad v}^{2}\bigr]\dxdy<\infty$, as in Lecture 13.
+\item The unknown $u$ must also satisfy the essential condition $u=g$; the
+      test function must satisfy $v=0$ (Step 2):
+\begin{equation}\label{eq:spaces}
+  \boxed{\;
+  \begin{aligned}
+  \text{trial: }\ V_{g}&=\Bigl\{v:\ \Iint\bigl[v^{2}+\abs{\grad v}^{2}\bigr]\dxdy<\infty,
+       \ \ v=g \text{ on } \dOm\Bigr\},\\
+  \text{test: }\ V_{0}&=\Bigl\{v:\ \Iint\bigl[v^{2}+\abs{\grad v}^{2}\bigr]\dxdy<\infty,
+       \ \ v=0 \text{ on } \dOm\Bigr\}=H^{1}_{0}(\Om),
+  \end{aligned}\;}
+\end{equation}
+      with $\abs{\grad v}^{2}=(v_{,x})^{2}+(v_{,y})^{2}$.
+\item They differ because $g\neq0$ (in part (d), $g=1$).  Exactly Lecture 5's
+      warning: $V_{g}$ is not a vector space --- $u_{1}+u_{2}$ has boundary
+      value $2g$ --- while $V_{0}$ is.
+\end{steps}
+
+\medskip
+\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{(Variational problem)}\ \ Find $u\in V_{g}$ such that
+\[
+  \Iint\grad u\cdot\grad v\dxdy=\Iint f v\dxdy
+  \qquad\text{for all } v\in V_{0},
+\]
+with trial set $V_{g}$ and test space $V_{0}=H^{1}_{0}(\Om)$ from \eqr{eq:spaces}.}}
+
+\medskip
+{\small\color{black!60}\textbf{Mechanics reading.}  A membrane with unit tension
+under pressure $f$, its rim held at height $g$.  $V_{g}$: deflected shapes that
+honour the rim.  $V_{0}$: virtual deflections, which may not move the rim.
+\eqr{eq:weak} is virtual work; the rim reaction does no virtual work because
+$v=0$ there.}
+
+% ==================================================================
+\newpage
+\problem{4(b)}{4b}
+
+\textbf{Problem.} Show that the variational problem has a unique solution by
+showing that it meets all of the criteria of the Lax--Milgram theorem.
+
+% ------------------------------------------------------------------
+\subsection*{Step 1 --- put the problem in Lax--Milgram's form
+  \ \src{Lecture 13: $u$ and $v$ in the same Hilbert space;
+         Lecture 5: lift the boundary data}}
+
+\begin{steps}
+\item Lax--Milgram (Lecture 13) asks for \emph{one} Hilbert space $\Vsp$ with
+      $u,v\in\Vsp$.  In 4(a), $u\in V_{g}$ but $v\in V_{0}$.  Lecture 5's fix:
+      split off a known function that carries the boundary data.
+\item Pick any $G\in V_{g}$.  (If $V_{g}$ were empty there would be no
+      candidate $u$ at all.)  For part (d), $g=1$ and $G\equiv1$ works:
+      $\Iint[1^{2}+0]\dxdy=4<\infty$.
+\item Write $u=w+G$.  Then $w=g-g=0$ on $\dOm$, so $w\in V_{0}$.  Substitute in
+      \eqr{eq:weak} and move the known part to the right:
+\begin{equation}\label{eq:lifted}
+  \underbrace{\Iint\grad w\cdot\grad v\dxdy}_{B(w,v)}
+  \;=\;\underbrace{\Iint f v\dxdy-\Iint\grad G\cdot\grad v\dxdy}_{\widetilde{L}(v)}
+  \qquad\forall\,v\in\Vsp:=V_{0}=H^{1}_{0}(\Om),
+\end{equation}
+      with the norm of Lecture 13,
+      $\norm{v}^{2}_{\Vsp}=\norm{v}^{2}+\norm{\grad v}^{2}$, where
+      $\norm{\cdot}$ is the $L^{2}(\Om)$ norm.
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 2 --- (S) and (CB)
+  \ \src{Lecture 13, Part III, checks 1--2; Lecture 6: Cauchy}}
+
+\begin{steps}
+\item \textbf{(S)} $\grad w\cdot\grad v=\grad v\cdot\grad w$ pointwise, so
+      $B(w,v)=B(v,w)$.
+\item \textbf{(CB)}
+\begin{equation}\label{eq:cb}
+  \abs{B(w,v)}
+  \le\underbrace{\Iint\abs{\grad w}\,\abs{\grad v}\dxdy}_{\abs{\bm a\cdot\bm b}\le\abs{\bm a}\abs{\bm b}}
+  \le\underbrace{\norm{\grad w}\,\norm{\grad v}}_{\text{Cauchy}}
+  \le\underbrace{\norm{w}_{\Vsp}\norm{v}_{\Vsp}}_{\norm{\grad v}^{2}\le\norm{v}^{2}+\norm{\grad v}^{2}},
+  \qquad\beta^{*}=1 .
+\end{equation}
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 3 --- Poincar\'e on the square
+  \ \src{Lecture 8, eqs.~(1.127)--(1.128): the same three lines, in $x$, for
+         each fixed $y$}}
+
+\begin{steps}
+\item Take $v\in V_{0}$ and fix $y$.  $v(-1,y)=0$ on the left side, so
+\begin{equation}\label{eq:p1}
+  v(x,y)=\int_{-1}^{x}v_{,x}(s,y)\,\mathrm{d}s .
+\end{equation}
+\item Bound it by the whole line and apply Cauchy to $1\cdot\abs{v_{,x}}$ on an
+      interval of length $2$:
+\begin{equation}\label{eq:p2}
+  \abs{v(x,y)}\le\int_{-1}^{1}\abs{v_{,x}(s,y)}\,\mathrm{d}s
+  \le\underbrace{\Bigl(\int_{-1}^{1}1^{2}\,\mathrm{d}s\Bigr)^{1/2}}_{\sqrt2}
+     \Bigl(\int_{-1}^{1}v_{,x}(s,y)^{2}\,\mathrm{d}s\Bigr)^{1/2} .
+\end{equation}
+\item Square \eqref{eq:p2}.  The right side no longer depends on $x$, so
+      integrating over $x\in(-1,1)$ multiplies it by $2$; then integrate over
+      $y\in(-1,1)$:
+\begin{equation}\label{eq:poinc}
+  \boxed{\;\norm{v}^{2}=\Iint v^{2}\dxdy\le
+  \underbrace{2\cdot2}_{x\text{-length}\,\times\,\eqref{eq:p2}}\Iint(v_{,x})^{2}\dxdy
+  \le4\,\norm{\grad v}^{2}\;}
+\end{equation}
+      This is Lecture 13's multi-dimensional Poincar\'e,
+      $\norm{v}\le C\norm{\grad v}$, with $C=2$.
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 4 --- (VE) and the bound on $\widetilde{L}$
+  \ \src{Lecture 13, Part III, checks 3--4}}
+
+\begin{steps}
+\item \textbf{(VE)} Split $B(v,v)$ in half and use \eqr{eq:poinc} on one half:
+\begin{equation}\label{eq:ve}
+  B(v,v)=\norm{\grad v}^{2}
+  =\tfrac12\norm{\grad v}^{2}+\underbrace{\tfrac12\norm{\grad v}^{2}}_{\ge\,\frac18\norm{v}^{2}\ \text{by \eqr{eq:poinc}}}
+  \ge\tfrac18\bigl(\norm{\grad v}^{2}+\norm{v}^{2}\bigr)
+  =\tfrac18\norm{v}^{2}_{\Vsp},
+  \qquad\beta_{*}=\tfrac18 .
+\end{equation}
+      Same as Lecture 13's $\beta_{*}=\tfrac12\min(1/C^{2},1)$ with $C=2$.
+\item \textbf{$\widetilde{L}$ bounded}, by Cauchy on each term of
+      \eqr{eq:lifted}:
+\begin{equation}\label{eq:lb}
+  \abs{\widetilde{L}(v)}\le\norm{f}\,\norm{v}+\norm{\grad G}\,\norm{\grad v}
+  \le\bigl(\norm{f}+\norm{\grad G}\bigr)\norm{v}_{\Vsp} .
+\end{equation}
+      This needs $\Iint f^{2}<\infty$.  In part (d), $f$ is continuous on the
+      closed square, $e^{\sin\pi x\sin\pi y}\le e$ and the brace is at most
+      $2+2+1+1=6$, so $\abs{f}\le6\pi^{2}e$; and $\grad G=0$.
+\end{steps}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}llll@{}}
+\toprule
+condition & holds because & constant & equation\\
+\midrule
+(S)  symmetric          & $\grad w\cdot\grad v=\grad v\cdot\grad w$ & --- & Step 2\\
+(CB) bounded            & Cauchy                                   & $\beta^{*}=1$ & \eqref{eq:cb}\\
+(VE) $\Vsp$-elliptic    & Poincar\'e, $C=2$                        & $\beta_{*}=1/8$ & \eqref{eq:ve}\\
+$\widetilde{L}$ bounded & Cauchy                                   & $\norm{f}+\norm{\grad G}$ & \eqref{eq:lb}\\
+\bottomrule
+\end{tabular}
+\captionof{table}{The four Lax--Milgram conditions for \eqr{eq:lifted} on
+$\Vsp=H^{1}_{0}\bigl((-1,1)^{2}\bigr)$.}
+\label{tab:lm}
+\end{minipage}
+\end{center}
+
+% ------------------------------------------------------------------
+\subsection*{Step 5 --- conclusion, and uniqueness of $u$ itself}
+
+\begin{steps}
+\item Table~\ref{tab:lm} meets every hypothesis of Lax--Milgram, so
+      \eqr{eq:lifted} has a unique $w\in V_{0}$, with
+      $\norm{w}_{\Vsp}\le\widetilde{L}/\beta_{*}=8\bigl(\norm{f}+\norm{\grad G}\bigr)$.
+      Then $u=w+G\in V_{g}$ solves the variational problem of 4(a).
+\item $u$ does not depend on which $G$ was picked.  If $u_{1},u_{2}\in V_{g}$
+      both solve it, $d=u_{1}-u_{2}$ has boundary value $g-g=0$, so
+      $d\in V_{0}$, and subtracting the two problems gives $B(d,v)=0$ for all
+      $v\in V_{0}$.  Take $v=d$ and use \eqr{eq:ve}:
+\begin{equation}\label{eq:uniq}
+  \tfrac18\norm{d}^{2}_{\Vsp}\le B(d,d)=0
+  \qquad\Longrightarrow\qquad d=0,\ \ u_{1}=u_{2}.
+\end{equation}
+\end{steps}
+
+\medskip
+\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{Conclusion.}  With $u=w+G$, the problem for $w$ on $H^{1}_{0}(\Om)$
+satisfies (S), (CB) with $\beta^{*}=1$, (VE) with $\beta_{*}=1/8$, and
+$\widetilde{L}$ is bounded.  By Lax--Milgram the variational problem of 4(a)
+has exactly one solution $u\in V_{g}$.}}
+
+\medskip
+{\small\color{black!60}\textbf{Mechanics reading.}  (VE) is ``no rigid-body
+mode'': the rim is held, so a membrane cannot move without stretching.
+\eqr{eq:poinc} is the 2D version of Lecture 8's ``pinned ends cannot move for
+free'' --- held on the left side, a deflection is controlled by its slope.
+$\beta^{*}/\beta_{*}=8$ is the constant that C\'ea's lemma will carry into the
+error estimate of part (d).}
+
+% ==================================================================
+\newpage
+\problem{4(c)}{4c}
+
+\textbf{Problem.} Develop a finite element method for this problem based on
+square elements.  On each element the solution on the four corners is
+interpolated with $s(x,y)=\alpha_{1}+\alpha_{2}x+\alpha_{3}y+\alpha_{4}xy$.
+Write out the basis functions and explicitly write out the linear system
+(uniform grid, same spacing in $x$ and $y$).
+
+% ------------------------------------------------------------------
+\subsection*{Step 1 --- grid, element, local coordinates}
+
+\begin{steps}
+\item $N\times N$ squares, $h=2/N$, nodes $x_{i}=-1+ih$, $y_{j}=-1+jh$,
+      $i,j=0,\dots,N$.  Interior nodes $1\le i,j\le N-1$: $(N-1)^{2}$ unknowns.
+      Boundary nodes carry the known value $g(x_{i},y_{j})$.
+\item Element $K_{ij}=[x_{i},x_{i+1}]\times[y_{j},y_{j+1}]$, local coordinates
+      $\xi=(x-x_{i})/h$, $\eta=(y-y_{j})/h\in[0,1]$, corners numbered
+      counter-clockwise from $(x_{i},y_{j})$ (Figure~\ref{fig:element}).
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 2 --- the four corner values fix $s$; the shape functions}
+
+\begin{steps}
+\item Put $x=x_{i}+h\xi$, $y=y_{j}+h\eta$ into $s$ and collect powers:
+\begin{equation}\label{eq:sloc}
+  s=\underbrace{\alpha_{1}+\alpha_{2}x_{i}+\alpha_{3}y_{j}+\alpha_{4}x_{i}y_{j}}_{c_{1}}
+   +\underbrace{h(\alpha_{2}+\alpha_{4}y_{j})}_{c_{2}}\,\xi
+   +\underbrace{h(\alpha_{3}+\alpha_{4}x_{i})}_{c_{3}}\,\eta
+   +\underbrace{h^{2}\alpha_{4}}_{c_{4}}\,\xi\eta .
+\end{equation}
+      Read bottom-up, $\alpha_{4},\alpha_{3},\alpha_{2},\alpha_{1}$ follow from
+      $c_{4},c_{3},c_{2},c_{1}$ one at a time, so the $\alpha$'s and the $c$'s
+      carry the same information.
+\item Evaluate \eqref{eq:sloc} at the four corners, $s_{1}=s(0,0)$,
+      $s_{2}=s(1,0)$, $s_{3}=s(1,1)$, $s_{4}=s(0,1)$:
+      $s_{1}=c_{1}$, $s_{2}=c_{1}+c_{2}$, $s_{4}=c_{1}+c_{3}$,
+      $s_{3}=c_{1}+c_{2}+c_{3}+c_{4}$.  Solved one at a time,
+\begin{equation}\label{eq:cs}
+  c_{1}=s_{1},\quad c_{2}=s_{2}-s_{1},\quad c_{3}=s_{4}-s_{1},\quad
+  c_{4}=s_{3}-s_{2}-s_{4}+s_{1},
+\end{equation}
+      a unique interpolant for any four corner values.
+\item Put \eqref{eq:cs} back into \eqref{eq:sloc} and collect by corner value:
+      $s=\sum_{a=1}^{4}s_{a}N_{a}(\xi,\eta)$ with
+\begin{equation}\label{eq:shapes}
+  \boxed{\;N_{1}=(1-\xi)(1-\eta),\qquad N_{2}=\xi(1-\eta),\qquad
+          N_{3}=\xi\eta,\qquad N_{4}=(1-\xi)\eta\;}
+\end{equation}
+      Each is $1$ at its own corner and $0$ at the other three.
+\end{steps}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering
+\begin{tikzpicture}[font=\small]
+  % one element
+  \begin{scope}[x=2.6cm,y=2.6cm]
+    \draw[thick,fill=blue!4] (0,0) rectangle (1,1);
+    \foreach \x/\y/\n/\pos in {0/0/1/below left,1/0/2/below right,1/1/3/above right,0/1/4/above left}
+      {\fill (\x,\y) circle (1.6pt); \node[\pos] at (\x,\y) {$N_{\n}$};}
+    \node at (0.5,0.5) {$K_{ij}$};
+    \draw[->] (0.15,-0.22) -- (0.85,-0.22) node[midway,below] {$\xi$};
+    \draw[->] (-0.22,0.15) -- (-0.22,0.85) node[midway,left] {$\eta$};
+    \node[font=\scriptsize,below left] at (0,-0.08) {$(x_{i},y_{j})$};
+  \end{scope}
+  % the four elements around node (i,j)
+  \begin{scope}[x=1.55cm,y=1.55cm,xshift=6.3cm,yshift=-0.25cm]
+    \fill[blue!4] (0,0) rectangle (2,2);
+    \foreach \t in {0,1,2}{\draw[gray] (\t,0) -- (\t,2); \draw[gray] (0,\t) -- (2,\t);}
+    \foreach \x in {0,1,2}{\foreach \y in {0,1,2}{\fill (\x,\y) circle (1.6pt);}}
+    \foreach \x/\y in {0/0,1/0,2/0,0/1,2/1,0/2,1/2,2/2}
+      {\node[font=\footnotesize,above right=0pt] at (\x,\y) {$-\tfrac13$};}
+    \node[font=\footnotesize,above right=0pt] at (1,1) {$\tfrac83$};
+    \node[font=\scriptsize,below=3pt] at (1,0) {$(i,j-1)$};
+    \node[font=\scriptsize,below right=0pt] at (1,1) {$(i,j)$};
+    \node[font=\scriptsize,above=12pt] at (1,2) {$(i,j+1)$};
+    \node[font=\scriptsize,left=3pt] at (0,1) {$(i-1,j)$};
+    \node[font=\scriptsize,right=16pt] at (2,1) {$(i+1,j)$};
+  \end{scope}
+\end{tikzpicture}
+\captionof{figure}{Left: one element and its four shape functions
+\eqr{eq:shapes}.  Right: the four elements around an interior node $(i,j)$ ---
+the support of $\varphi_{ij}$ --- with the coefficients of its row of the
+stiffness matrix, \eqr{eq:row}.}
+\label{fig:element}
+\end{minipage}
+\end{center}
+
+% ------------------------------------------------------------------
+\subsection*{Step 3 --- continuity, and the global basis
+  \ \src{Lecture 4: 1D hats; HW3 Problem 3: a jump puts a delta in the
+         derivative}}
+
+\begin{steps}
+\item On the right edge of $K_{ij}$, $\xi=1$ and \eqref{eq:shapes} gives
+      $s=s_{2}(1-\eta)+s_{3}\eta$: only the two corner values on that edge
+      enter.  The neighbour $K_{i+1,j}$ produces the same line from the same
+      two values on its left edge.  So $s$ is continuous across every edge,
+      $\grad s$ has no delta, $\Iint\abs{\grad s}^{2}<\infty$: the method is
+      \textbf{conforming}, $V_{h}\subset$ the spaces of \eqr{eq:spaces}.
+\item Glue the $N_{a}$ of the four squares around node $(i,j)$ (Figure
+      \ref{fig:element}, right).  On $K_{ij}$ the node is corner $1$, value
+      $(1-\xi)(1-\eta)$; on $K_{i-1,j}$ it is corner $2$, value $\xi(1-\eta)$;
+      and so on.  In every case the $x$-factor is Lecture 4's hat $\varphi_{i}$
+      on the $x$-grid and the $y$-factor is $\varphi_{j}$ on the $y$-grid:
+\begin{equation}\label{eq:basis}
+  \boxed{\;\varphi_{ij}(x,y)=\varphi_{i}(x)\,\varphi_{j}(y),\qquad
+  \varphi_{i}(x)=\begin{cases}1-\abs{x-x_{i}}/h, & \abs{x-x_{i}}\le h,\\
+                              0, & \text{otherwise.}\end{cases}\;}
+\end{equation}
+\item Trial and test functions, with the boundary values as Lecture 5's lift:
+\begin{equation}\label{eq:trial}
+  U=\underbrace{\sum_{(k,l)\in\dOm}g(x_{k},y_{l})\,\varphi_{kl}}_{\text{known, carries }u=g}
+   +\sum_{i,j=1}^{N-1}\xi_{ij}\,\varphi_{ij},
+  \qquad v=\varphi_{ij},\ \ 1\le i,j\le N-1 .
+\end{equation}
+\end{steps}
+
+\medskip
+\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{(FEM)}\ \ Find $U$ of the form \eqr{eq:trial} such that
+$\displaystyle\Iint\grad U\cdot\grad\varphi_{ij}\dxdy=\Iint f\varphi_{ij}\dxdy$
+for every interior node $(i,j)$.}}
+
+% ------------------------------------------------------------------
+\subsection*{Step 4 --- the element stiffness matrix}
+
+\begin{steps}
+\item $\partial/\partial x=(1/h)\,\partial/\partial\xi$,
+      $\partial/\partial y=(1/h)\,\partial/\partial\eta$ and
+      $\mathrm{d}x\,\mathrm{d}y=h^{2}\,\mathrm{d}\xi\,\mathrm{d}\eta$, so
+\begin{equation}\label{eq:kedef}
+  k^{e}_{ab}=\iint_{K}\grad N_{a}\cdot\grad N_{b}\dxdy
+  =\underbrace{\tfrac{1}{h^{2}}\cdot h^{2}}_{=\,1}
+   \int_{0}^{1}\!\!\int_{0}^{1}\bigl(N_{a,\xi}N_{b,\xi}+N_{a,\eta}N_{b,\eta}\bigr)
+   \,\mathrm{d}\xi\,\mathrm{d}\eta .
+\end{equation}
+      $h$ cancels: in 2D the stiffness of a square does not depend on its
+      size.
+\item Every $N_{a}$ in \eqr{eq:shapes} is a product of $1-\xi$ or $\xi$ with
+      $1-\eta$ or $\eta$, so \eqref{eq:kedef} splits into 1D integrals:
+\begin{equation}\label{eq:1d}
+  \int_{0}^{1}(1-\xi)^{2}\mathrm{d}\xi=\tfrac13,\quad
+  \int_{0}^{1}\xi(1-\xi)\,\mathrm{d}\xi=\tfrac12-\tfrac13=\tfrac16,\quad
+  \bigl[(1-\xi)'\bigr]^{2}=1,\quad (1-\xi)'\,\xi'=-1 .
+\end{equation}
+\item Three kinds of pair, each ``$x$-part $\times$ $y$-part $+$ $y$-part
+      $\times$ $x$-part'':
+\begin{equation}\label{eq:kecases}
+  \underbrace{1\cdot\tfrac13+\tfrac13\cdot1=\tfrac46}_{a=b},\qquad
+  \underbrace{(-1)\cdot\tfrac13+\tfrac16\cdot1=-\tfrac16}_{a,b\ \text{share an edge}},\qquad
+  \underbrace{(-1)\cdot\tfrac16+\tfrac16\cdot(-1)=-\tfrac26}_{a,b\ \text{opposite}},
+\end{equation}
+\begin{equation}\label{eq:ke}
+  \boxed{\;\bm{k}^{e}=\frac16\begin{bmatrix}
+     4&-1&-2&-1\\ -1&4&-1&-2\\ -2&-1&4&-1\\ -1&-2&-1&4\end{bmatrix}\;}
+\end{equation}
+      Each row sums to $0$: a constant has no gradient, hence no energy.
+\end{steps}
+
+% ------------------------------------------------------------------
+\subsection*{Step 5 --- the linear system
+  \ \src{Lecture 13, eq.~(1.236): $A_{ij}=B(\varphi_{i},\varphi_{j})$;
+         Lecture 5, eq.~(1.66): known values to the RHS; Lecture 4: trapezoidal load}}
+
+\begin{steps}
+\item \textbf{Row of an interior node $(i,j)$.}  It sits in $4$ squares as a
+      corner, shares each edge-neighbour with $2$ squares and each diagonal
+      neighbour with $1$.  From \eqref{eq:kecases}:
+      $4\cdot\tfrac46=\tfrac83$, \ $2\cdot(-\tfrac16)=-\tfrac13$, \
+      $1\cdot(-\tfrac26)=-\tfrac13$:
+\begin{equation}\label{eq:row}
+  \boxed{\;\frac13\Bigl[\,8\,U_{i,j}-\sum_{(k,l)\in\mathcal{N}_{ij}}U_{k,l}\Bigr]=b_{ij},
+  \qquad 1\le i,j\le N-1,\;}
+\end{equation}
+      $\mathcal{N}_{ij}$ the eight neighbours $k\in\{i-1,i,i+1\}$,
+      $l\in\{j-1,j,j+1\}$, $(k,l)\neq(i,j)$,
+      and $U_{k,l}=g(x_{k},y_{l})$ whenever $(k,l)$ is a boundary node.
+\item \textbf{Load.}  $b_{ij}=\Iint f\varphi_{ij}$.  The trapezoidal rule of
+      Lecture 4 on each square, $\iint_{K}F\approx\tfrac{h^{2}}{4}\sum_{\text{corners}}F$,
+      sees $f\varphi_{ij}$ only at corner $(i,j)$, where $\varphi_{ij}=1$; four
+      squares:
+\begin{equation}\label{eq:load}
+  b_{ij}\approx4\cdot\tfrac{h^{2}}{4}\,f(x_{i},y_{j})=h^{2}f_{ij} .
+\end{equation}
+\item \textbf{Matrix form.}  Order the unknowns row by row,
+      $\bm{U}=(U_{1,1},\dots,U_{N-1,1},\,U_{1,2},\dots,U_{N-1,N-1})^{T}$.  Move
+      every boundary value in \eqr{eq:row} to the right:
+\begin{equation}\label{eq:system}
+  \boxed{\begin{gathered}
+  \bm{A}\,\bm{U}=\bm{b}+\bm{r},\qquad
+  \bm{A}=\frac13\begin{bmatrix}
+    \bm{T}&\bm{S}&&\\ \bm{S}&\bm{T}&\ddots&\\ &\ddots&\ddots&\bm{S}\\ &&\bm{S}&\bm{T}
+  \end{bmatrix},\\[6pt]
+  \bm{T}=\begin{bmatrix}8&-1&&\\-1&8&\ddots&\\&\ddots&\ddots&-1\\&&-1&8\end{bmatrix},\qquad
+  \bm{S}=\begin{bmatrix}-1&-1&&\\-1&-1&\ddots&\\&\ddots&\ddots&-1\\&&-1&-1\end{bmatrix}
+  \end{gathered}}
+\end{equation}
+      $\bm{A}$ is $(N-1)^{2}\times(N-1)^{2}$, made of $N-1$ block rows;
+      $\bm{T},\bm{S}$ are $(N-1)\times(N-1)$; $\bm{T}$ couples a node to its
+      own grid row, $\bm{S}$ to the rows above and below.
+\item $r_{ij}=\tfrac13\sum g(x_{k},y_{l})$ over the boundary nodes among the
+      eight neighbours of $(i,j)$.  For $g=1$ (part (d)):
+\begin{equation}\label{eq:r}
+  r_{ij}=\begin{cases}
+   5/3, & (i,j)\ \text{next to a corner (5 boundary neighbours)},\\
+   1,   & (i,j)\ \text{next to one side (3 boundary neighbours)},\\
+   0,   & \text{otherwise}.\end{cases}
+\end{equation}
+\item $\bm{A}$ is symmetric positive definite by Lecture 13's claim: (S) and
+      (VE) of 4(b) hold, whatever the element shape.
+\end{steps}
+
+\medskip
+{\small\color{black!60}\textbf{Same as finite differences?}  Divide
+\eqr{eq:row} by $h^{2}$ and use \eqref{eq:load}:
+$\bigl[8U_{i,j}-\sum_{\mathcal{N}_{ij}}U_{k,l}\bigr]/(3h^{2})=f_{ij}$, a
+nine-point difference formula for $-\lap u$.  This is Lecture 4's ``CG(1) with
+trapezoidal load is the central difference method'', one dimension up: the 2D
+element couples diagonal neighbours too, which the five-point formula does
+not.}
+
+\newpage
+\problem{4(d)}{4d}
+
+\textbf{Problem.} Use the method of 4(c) to solve $-\grad\cdot\grad u=f$ on
+$\Om=[-1,1]^{2}$, $u=g$ on $\dOm$, with
+\[
+  f=\pi^{2}e^{\sin(\pi x)\sin(\pi y)}\bigl\{2\sin(\pi x)\sin(\pi y)
+   +2\cos^{2}(\pi x)\cos^{2}(\pi y)-\cos^{2}(\pi x)-\cos^{2}(\pi y)\bigr\},
+  \qquad g=1 .
+\]
+Create a convergence table showing both $\norm{\cdot}_{V}$ and
+$\norm{\cdot}_{L^{2}(\Om)}$ errors.  What order of convergence do you observe?
+The exact solution is $u=e^{\sin(\pi x)\sin(\pi y)}$.
+
+\subsection*{Step 1 --- the data are consistent}
+
+\begin{steps}
+\item With $s=\sin\pi x\sin\pi y$ and $u=e^{s}$,
+      $u_{,x}=\pi\cos\pi x\sin\pi y\,e^{s}$ and
+\begin{align}
+  -u_{,xx}-u_{,yy}
+  &=\pi^{2}e^{s}\bigl[2\sin\pi x\sin\pi y
+     -\cos^{2}\!\pi x\,\underbrace{\sin^{2}\!\pi y}_{1-\cos^{2}\pi y}
+     -\underbrace{\sin^{2}\!\pi x}_{1-\cos^{2}\pi x}\cos^{2}\!\pi y\bigr]\notag\\
+  &=\pi^{2}e^{s}\bigl[2\sin\pi x\sin\pi y+2\cos^{2}\!\pi x\cos^{2}\!\pi y
+     -\cos^{2}\!\pi x-\cos^{2}\!\pi y\bigr]=f .\label{eq:lap}
+\end{align}
+      Also checked symbolically ($-\lap u-f\equiv0$).
+\item On every side $\sin(\pm\pi)=0$, so $s=0$ and $u=e^{0}=1=g$.
+\end{steps}
+
+\subsection*{Step 2 --- the implementation \ \src{4(c); Lecture 5, eq.~(1.66)}}
+
+\begin{steps}
+\item \textbf{Grid.}  $N\times N$ squares, $N=4,\dots,256$, $h=2/N$,
+      $(N-1)^{2}$ unknowns.
+\item \textbf{Stiffness.}  The element matrix $\bm k^{e}$ of 4(c), the same on
+      every square, assembled.  Checked in the code: every interior row is
+      the stencil $\tfrac13[8;\,-1\times8]$ of 4(c), the interior matrix is
+      symmetric positive definite, and the boundary terms are $5/3$, $1$, $0$
+      as in 4(c).
+\item \textbf{Boundary.}  $U=g=1$ at boundary nodes, moved to the right-hand
+      side (Lecture 5).
+\item \textbf{Load.}  $b_{ij}=\iint f\varphi_{ij}$ by $3\times3$ Gauss points
+      per square, not the trapezoidal $h^{2}f_{ij}$ of 4(c); Step 4 compares.
+\item \textbf{Errors,} $4\times4$ Gauss points per square, with the norm of
+      Lecture 13, eq.~(1.254):
+\begin{equation}\label{eq:norms}
+  \norm{e}_{L^{2}(\Om)}^{2}=\iint_{\Om}(u-U)^{2}\dxdy,
+  \qquad
+  \norm{e}_{V}^{2}=\norm{e}_{L^{2}(\Om)}^{2}+\iint_{\Om}\abs{\grad(u-U)}^{2}\dxdy .
+\end{equation}
+      Rate $=\log_{2}\bigl(E(h)/E(h/2)\bigr)$.
+\end{steps}
+
+\subsection*{Step 3 --- convergence table}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering\small
+\input{hw4_p4d_table}
+\captionof{table}{Bilinear squares on $[-1,1]^{2}$, $N\times N$ elements.}
+\label{tab:p4d}
+\end{minipage}
+\end{center}
+
+\begin{center}
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[width=\linewidth]{hw4_p4d_figure.pdf}
+\captionof{figure}{Left: $U$ at $N=32$ with contours of the exact $u$.  Right:
+the errors of Table~\ref{tab:p4d} against $h$, with slopes $1$ and $2$ for
+reference.}
+\label{fig:p4d}
+\end{minipage}
+\end{center}
+
+\subsection*{Step 4 --- the observed orders}
+
+\begin{steps}
+\item $\norm{e}_{V}$: rate $\to1.00$, \ie $\mathcal O(h)$.
+      $\norm{e}_{L^{2}(\Om)}$: rate $\to2.00$, \ie $\mathcal O(h^{2})$.  Clean
+      from $N=16$; at $N=4,8$ the mesh has only two to four squares across
+      each bump of $u$.
+\item The trapezoidal load of 4(c) gives the same rates; at $N=256$,
+      $\norm{e}_{V}=4.6355\times10^{-2}$ and
+      $\norm{e}_{L^{2}}=9.7057\times10^{-5}$, against
+      $4.6348\times10^{-2}$ and $9.5100\times10^{-5}$ with Gauss.
+\item \textbf{Why $\mathcal O(h)$ in $\norm{\cdot}_{V}$.}  $g=1$ is reproduced
+      exactly by the boundary terms of 4(c), so $U-1$ is the Galerkin
+      approximation of $w=u-1\in H^{1}_{0}$, and C\'ea's lemma (Lecture 13,
+      eq.~(1.242)) with the constants of 4(b) gives
+\begin{equation}\label{eq:cea}
+  \norm{u-U}_{V}\le\frac{\beta^{*}}{\beta_{*}}\,\norm{u-v}_{V}
+  =8\,\norm{u-v}_{V}\qquad\text{for every admissible } v\in V_{h} .
+\end{equation}
+      With $v$ the bilinear interpolant of $u$, the right side is
+      $\mathcal O(h)$.
+\item \textbf{Why $\mathcal O(h^{2})$ in $L^{2}$.}  Lecture 7's duality
+      argument: the interpolation estimate is used twice, once on $e$ and
+      once on the dual solution, one factor of $h$ each.
+\end{steps}
+
+\outside{the interpolation estimate for squares}{Lecture 13 states
+$\norm{u-u_{h}}_{H^{1}}\le c\,\norm{h\,u}_{H^{2}}$, eq.~(1.262), for linear
+triangles.  The same $\mathcal O(h)$ bound for the bilinear interpolant on
+squares, and the 2D duality argument behind $\mathcal O(h^{2})$ in $L^{2}$, are
+standard but were not shown in class.  Table~\ref{tab:p4d} confirms both
+rates.}
+
+\medskip
+\noindent\fbox{\parbox{0.955\linewidth}{%
+\textbf{Conclusion.}  Bilinear squares converge at $\mathcal O(h)$ in
+$\norm{\cdot}_{V}$ and $\mathcal O(h^{2})$ in $\norm{\cdot}_{L^{2}(\Om)}$ ---
+the same orders as CG(1) --- with $\norm{e}_{V}=4.63\times10^{-2}$ and
+$\norm{e}_{L^{2}}=9.51\times10^{-5}$ at $N=256$.}}
+
+\end{document}

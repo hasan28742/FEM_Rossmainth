@@ -1,0 +1,79 @@
+%  proposal.tex  --  MATH 6660, Final Project proposal (due Mon Nov 9, 2026).
+%  Build: pdflatex proposal.tex  (twice)
+\documentclass[12pt]{article}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}   % Times New Roman text and math
+\usepackage{bm}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor={blue!45!black},citecolor={blue!45!black},
+            urlcolor={blue!45!black},pdfborder={0 0 0}]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\newcommand{\jump}[1]{[\![#1]\!]}
+
+\hypersetup{pdftitle={MATH 6660 Final Project Proposal},
+            pdfauthor={Md Mahmudul Hasan Mollah}}
+
+\begin{document}
+\thispagestyle{empty}
+
+\begin{center}
+  {\large\bfseries MATH 6660 --- Final Project Proposal}\\[2pt]
+  {\small Fall 2026}\\[8pt]
+  Md Mahmudul Hasan Mollah\\
+\end{center}
+
+\vspace{4pt}
+\hrule
+\vspace{10pt}
+
+\textbf{Title.}
+Cohesive Zone Elements: Camanho's Bilinear Law,
+its Finite Element Implementation, and its Engineering Applications
+
+\textbf{Article.}
+P.~P.~Camanho, C.~G.~D\'avila, and M.~F.~de~Moura,
+``Numerical simulation of mixed-mode progressive delamination in composite
+materials,'' \emph{Journal of Composite Materials} \textbf{37}(16) (2003),
+1415--1438. \href{https://doi.org/10.1177/0021998303034505}{doi:10.1177/0021998303034505}
+
+\textbf{Proposed project.}
+Camanho, D\'avila and de~Moura model interface fracture with zero-thickness
+decohesion elements governed by a bilinear mixed-mode traction--separation
+law: a quadratic stress criterion for damage onset, the Benzeggagh--Kenane
+criterion for propagation, and a single irreversible damage
+variable~\cite{camanho2003,camanho2002}.
+This project will derive the finite element formulation, in which the
+displacement may jump across the fracture surface $\Gamma_c$ and the weak form
+gains an interface term, and show how the damage evolves under different
+loading conditions (pure opening, pure shear and compression--shear) using
+single-element simulations in MOOSE~\cite{moose}, an open-source finite element
+framework that implements this law. Finally, the project will apply the model to example problems, which may include composite materials, nuclear reactor components and natural fractures in subsurface rock.\\
+
+\vspace{4pt}
+\begingroup
+\small
+\renewcommand{\section}[2]{\textbf{References}\par\vspace{-2pt}}
+\begin{thebibliography}{9}
+  \setlength{\itemsep}{1pt}
+  \bibitem{camanho2003}
+    P.~P.~Camanho, C.~G.~D\'avila, M.~F.~de~Moura,
+    Numerical simulation of mixed-mode progressive delamination in composite
+    materials, \emph{J.\ Compos.\ Mater.} 37 (2003) 1415--1438.
+  \bibitem{camanho2002}
+    P.~P.~Camanho, C.~G.~D\'avila,
+    Mixed-mode decohesion finite elements for the simulation of delamination
+    in composite materials, NASA/TM-2002-211737, NASA Langley Research
+    Center, 2002.
+  \bibitem{moose}
+    G.~Giudicelli et al., 3.0 -- MOOSE: Enabling massively parallel
+    multiphysics simulations, \emph{SoftwareX} 26 (2024) 101690.
+\end{thebibliography}
+\endgroup
+
+\end{document}
