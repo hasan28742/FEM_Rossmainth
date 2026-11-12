@@ -23,6 +23,21 @@
 \usepackage[colorlinks=true,linkcolor={blue!45!black},pdfborder={0 0 0}]{hyperref}
 \usepackage{pdfcomment}
 \usepackage{xspace}
+\usepackage{colortbl}
+\usepackage{tcolorbox}
+
+% ---- element colours for the assembly box (Figure fig:assembly) ------
+\definecolor{elone}{HTML}{C0392B}
+\definecolor{eltwo}{HTML}{CA6F1E}
+\definecolor{elthree}{HTML}{1F618D}
+\definecolor{elfour}{HTML}{1E8449}
+\definecolor{elfive}{HTML}{7D3C98}
+\definecolor{elsix}{HTML}{0097A7}
+\definecolor{elseven}{HTML}{C2185B}
+\definecolor{eleight}{HTML}{8D6E63}
+\definecolor{elnine}{HTML}{9E9D24}
+\newcommand{\en}[2]{\tikz[baseline=(c.base)]\node[circle,draw=#2,text=#2,
+  inner sep=0.7pt,font=\scriptsize\bfseries](c){#1};}
 
 % every figure and table carries a number and sits where it was written
 \captionsetup{font=small,labelfont=bf,justification=justified,
@@ -749,13 +764,22 @@ for every interior node $(i,j)$.}}
 % ------------------------------------------------------------------
 \subsection*{The element stiffness matrix}
 
-Differentiating \eqref{eq:hatsQ} gives the gradients on $\Om_{ij}$:
+The gradient of $\varphi_{p}$ is the vector of its two partial derivatives,
+$\grad\varphi_{p}=(\partial\varphi_{p}/\partial x,\,\partial\varphi_{p}/\partial y)$.
+In each $\varphi_{p}$ of \eqref{eq:hatsQ}, $x$ appears in one factor and $y$
+in the other, so $\partial/\partial x$ differentiates only the $x$-factor and
+$\partial/\partial y$ only the $y$-factor.  For example, in
+$\varphi_{1}=(x_{i+1}-x)(y_{j+1}-y)/h^{2}$, $\partial(x_{i+1}-x)/\partial x=-1$
+gives $\partial\varphi_{1}/\partial x=-(y_{j+1}-y)/h^{2}$, and
+$\partial(y_{j+1}-y)/\partial y=-1$ gives
+$\partial\varphi_{1}/\partial y=-(x_{i+1}-x)/h^{2}$.  The four gradients on
+$\Om_{ij}$ are
 \begin{equation}\label{eq:gradQ}
   \begin{aligned}
-  \grad\varphi_{1}&=\tfrac{1}{h^{2}}\bigl(-(y_{j+1}-y),\,-(x_{i+1}-x)\bigr), &
-  \grad\varphi_{2}&=\tfrac{1}{h^{2}}\bigl(y_{j+1}-y,\,-(x-x_{i})\bigr),\\
-  \grad\varphi_{3}&=\tfrac{1}{h^{2}}\bigl(y-y_{j},\,x-x_{i}\bigr), &
-  \grad\varphi_{4}&=\tfrac{1}{h^{2}}\bigl(-(y-y_{j}),\,x_{i+1}-x\bigr).
+  \grad\varphi_{1}&=\Bigl(\frac{\partial\varphi_{1}}{\partial x},\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)=\Bigl(-\frac{y_{j+1}-y}{h^{2}},\;-\frac{x_{i+1}-x}{h^{2}}\Bigr),\\[3pt]
+  \grad\varphi_{2}&=\Bigl(\frac{\partial\varphi_{2}}{\partial x},\,\frac{\partial\varphi_{2}}{\partial y}\Bigr)=\Bigl(\frac{y_{j+1}-y}{h^{2}},\;-\frac{x-x_{i}}{h^{2}}\Bigr),\\[3pt]
+  \grad\varphi_{3}&=\Bigl(\frac{\partial\varphi_{3}}{\partial x},\,\frac{\partial\varphi_{3}}{\partial y}\Bigr)=\Bigl(\frac{y-y_{j}}{h^{2}},\;\frac{x-x_{i}}{h^{2}}\Bigr),\\[3pt]
+  \grad\varphi_{4}&=\Bigl(\frac{\partial\varphi_{4}}{\partial x},\,\frac{\partial\varphi_{4}}{\partial y}\Bigr)=\Bigl(-\frac{y-y_{j}}{h^{2}},\;\frac{x_{i+1}-x}{h^{2}}\Bigr).
   \end{aligned}
 \end{equation}
 Unlike on the triangle, these are not constant, so the step ``a constant
@@ -772,21 +796,85 @@ interval of length $h$:
   =\frac{h^{3}}{2}-\frac{h^{3}}{3}=\frac{h^{3}}{6},
   \end{gathered}
 \end{equation}
-and the same in $y$.  The entries of the element stiffness matrix are
-$k^{e}_{pq}=\iint_{\Om_{ij}}\grad\varphi_{p}\cdot\grad\varphi_{q}\dxdy$, and
-there are three kinds: a corner with itself, two corners that share an edge,
-and two opposite corners.  Taking the dot products in \eqref{eq:gradQ} and
-integrating with \eqref{eq:1d},
+and the same in $y$.
+
+The element stiffness matrix $\bm k^{e}$ is $4\times4$, one row and one
+column per corner.  Its entry in row $p$ and column $q$, $p,q=1,2,3,4$, is
+\begin{equation}\label{eq:kepq}
+  k^{e}_{pq}=\iint_{\Om_{ij}}\grad\varphi_{p}\cdot\grad\varphi_{q}\dxdy ,
+\end{equation}
+the contribution of $\Om_{ij}$ to $A_{ji}$ in \eqref{eq:system3} when global
+node $j$ is corner $p$ and global node $i$ is corner $q$.  Row $p$ is the
+equation tested with $\varphi_{p}$; column $q$ multiplies the value of $U$ at
+corner $q$.  For example, $k^{e}_{12}$ couples corner $1$ with corner $2$.
+There are three kinds of pair: a corner with itself ($k^{e}_{11}$), two
+corners that share an edge ($k^{e}_{12}$), and two opposite corners
+($k^{e}_{13}$).  Each is computed from \eqref{eq:kepq} in the same steps.
+
+\textbf{A corner with itself, $p=q=1$.}
 \begin{align}
-  k^{e}_{11}&=\frac{1}{h^{4}}\iint_{\Om_{ij}}\bigl[(y_{j+1}-y)^{2}+(x_{i+1}-x)^{2}\bigr]\dxdy
-   =\frac{1}{h^{4}}\Bigl[h\cdot\frac{h^{3}}{3}+\frac{h^{3}}{3}\cdot h\Bigr]
-   =\frac46,\notag\\
-  k^{e}_{12}&=\frac{1}{h^{4}}\iint_{\Om_{ij}}\bigl[-(y_{j+1}-y)^{2}+(x_{i+1}-x)(x-x_{i})\bigr]\dxdy
-   =\frac{1}{h^{4}}\Bigl[-h\cdot\frac{h^{3}}{3}+\frac{h^{3}}{6}\cdot h\Bigr]
-   =-\frac16,\notag\\
-  k^{e}_{13}&=\frac{1}{h^{4}}\iint_{\Om_{ij}}\bigl[-(y_{j+1}-y)(y-y_{j})-(x_{i+1}-x)(x-x_{i})\bigr]\dxdy
-   =\frac{1}{h^{4}}\Bigl[-h\cdot\frac{h^{3}}{6}-\frac{h^{3}}{6}\cdot h\Bigr]
-   =-\frac26.\label{eq:kecases}
+  k^{e}_{11}
+  &=\iint_{\Om_{ij}}\grad\varphi_{1}\cdot\grad\varphi_{1}\dxdy
+   &&\text{\eqref{eq:kepq} with }p=q=1\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x},\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)\cdot\Bigl(\frac{\partial\varphi_{1}}{\partial x},\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)\dxdy
+   &&\text{components of }\grad\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x}\,\frac{\partial\varphi_{1}}{\partial x}+\frac{\partial\varphi_{1}}{\partial y}\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)\dxdy
+   &&\text{dot product}\notag\\
+  &=\iint_{\Om_{ij}}\biggl(\Bigl[-\frac{y_{j+1}-y}{h^{2}}\Bigr]\Bigl[-\frac{y_{j+1}-y}{h^{2}}\Bigr]
+   &&\text{by \eqref{eq:gradQ}}\notag\\
+  &\qquad+\Bigl[-\frac{x_{i+1}-x}{h^{2}}\Bigr]\Bigl[-\frac{x_{i+1}-x}{h^{2}}\Bigr]\biggr)\dxdy\notag\\
+  &=\frac{1}{h^{4}}\iint_{\Om_{ij}}\Bigl((y_{j+1}-y)^{2}+(x_{i+1}-x)^{2}\Bigr)\dxdy
+   &&\text{multiply out}\notag\\
+  &=\frac{1}{h^{4}}\Bigl[\int_{x_{i}}^{x_{i+1}}\!\!\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!(y_{j+1}-y)^{2}\mathrm{d}y
+   &&\text{separate }x,\,y\notag\\
+  &\qquad+\int_{x_{i}}^{x_{i+1}}\!\!(x_{i+1}-x)^{2}\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!\mathrm{d}y\Bigr]\notag\\
+  &=\frac{1}{h^{4}}\Bigl[h\cdot\frac{h^{3}}{3}+\frac{h^{3}}{3}\cdot h\Bigr]
+   &&\text{by \eqref{eq:1d}}\notag\\
+  &=\frac13+\frac13=\frac46 .\label{eq:ke11}
+\end{align}
+
+\textbf{Two corners that share an edge, $p=1$, $q=2$.}
+\begin{align}
+  k^{e}_{12}
+  &=\iint_{\Om_{ij}}\grad\varphi_{1}\cdot\grad\varphi_{2}\dxdy
+   &&\text{\eqref{eq:kepq} with }p=1,\ q=2\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x},\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)\cdot\Bigl(\frac{\partial\varphi_{2}}{\partial x},\,\frac{\partial\varphi_{2}}{\partial y}\Bigr)\dxdy
+   &&\text{components of }\grad\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x}\,\frac{\partial\varphi_{2}}{\partial x}+\frac{\partial\varphi_{1}}{\partial y}\,\frac{\partial\varphi_{2}}{\partial y}\Bigr)\dxdy
+   &&\text{dot product}\notag\\
+  &=\iint_{\Om_{ij}}\biggl(\Bigl[-\frac{y_{j+1}-y}{h^{2}}\Bigr]\Bigl[\frac{y_{j+1}-y}{h^{2}}\Bigr]
+   &&\text{by \eqref{eq:gradQ}}\notag\\
+  &\qquad+\Bigl[-\frac{x_{i+1}-x}{h^{2}}\Bigr]\Bigl[-\frac{x-x_{i}}{h^{2}}\Bigr]\biggr)\dxdy\notag\\
+  &=\frac{1}{h^{4}}\iint_{\Om_{ij}}\Bigl(-(y_{j+1}-y)^{2}+(x_{i+1}-x)(x-x_{i})\Bigr)\dxdy
+   &&\text{multiply out}\notag\\
+  &=\frac{1}{h^{4}}\Bigl[-\int_{x_{i}}^{x_{i+1}}\!\!\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!(y_{j+1}-y)^{2}\mathrm{d}y
+   &&\text{separate }x,\,y\notag\\
+  &\qquad+\int_{x_{i}}^{x_{i+1}}\!\!(x_{i+1}-x)(x-x_{i})\,\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!\mathrm{d}y\Bigr]\notag\\
+  &=\frac{1}{h^{4}}\Bigl[-h\cdot\frac{h^{3}}{3}+\frac{h^{3}}{6}\cdot h\Bigr]
+   &&\text{by \eqref{eq:1d}}\notag\\
+  &=-\frac13+\frac16=-\frac16 .\label{eq:ke12}
+\end{align}
+
+\textbf{Two opposite corners, $p=1$, $q=3$.}
+\begin{align}
+  k^{e}_{13}
+  &=\iint_{\Om_{ij}}\grad\varphi_{1}\cdot\grad\varphi_{3}\dxdy
+   &&\text{\eqref{eq:kepq} with }p=1,\ q=3\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x},\,\frac{\partial\varphi_{1}}{\partial y}\Bigr)\cdot\Bigl(\frac{\partial\varphi_{3}}{\partial x},\,\frac{\partial\varphi_{3}}{\partial y}\Bigr)\dxdy
+   &&\text{components of }\grad\notag\\
+  &=\iint_{\Om_{ij}}\Bigl(\frac{\partial\varphi_{1}}{\partial x}\,\frac{\partial\varphi_{3}}{\partial x}+\frac{\partial\varphi_{1}}{\partial y}\,\frac{\partial\varphi_{3}}{\partial y}\Bigr)\dxdy
+   &&\text{dot product}\notag\\
+  &=\iint_{\Om_{ij}}\biggl(\Bigl[-\frac{y_{j+1}-y}{h^{2}}\Bigr]\Bigl[\frac{y-y_{j}}{h^{2}}\Bigr]
+   &&\text{by \eqref{eq:gradQ}}\notag\\
+  &\qquad+\Bigl[-\frac{x_{i+1}-x}{h^{2}}\Bigr]\Bigl[\frac{x-x_{i}}{h^{2}}\Bigr]\biggr)\dxdy\notag\\
+  &=\frac{1}{h^{4}}\iint_{\Om_{ij}}\Bigl(-(y_{j+1}-y)(y-y_{j})-(x_{i+1}-x)(x-x_{i})\Bigr)\dxdy
+   &&\text{multiply out}\notag\\
+  &=\frac{1}{h^{4}}\Bigl[-\int_{x_{i}}^{x_{i+1}}\!\!\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!(y_{j+1}-y)(y-y_{j})\,\mathrm{d}y
+   &&\text{separate }x,\,y\notag\\
+  &\qquad-\int_{x_{i}}^{x_{i+1}}\!\!(x_{i+1}-x)(x-x_{i})\,\mathrm{d}x\int_{y_{j}}^{y_{j+1}}\!\!\mathrm{d}y\Bigr]\notag\\
+  &=\frac{1}{h^{4}}\Bigl[-h\cdot\frac{h^{3}}{6}-\frac{h^{3}}{6}\cdot h\Bigr]
+   &&\text{by \eqref{eq:1d}}\notag\\
+  &=-\frac16-\frac16=-\frac26 .\label{eq:kecases}
 \end{align}
 The factor $h^{4}$ cancels: in two dimensions the stiffness of a square
 element does not depend on its size.  The matrix is symmetric,
@@ -807,10 +895,11 @@ therefore no energy.
 
 \textbf{Row of an interior node.}\ \ An interior node $(i,j)$ is a corner of
 $4$ squares, shares each of its edge-neighbours with $2$ squares, and shares
-each of its diagonal neighbours with $1$ square.  By \eqref{eq:kecases}, its
+each of its diagonal neighbours with $1$ square.  By \eqref{eq:ke11}--\eqref{eq:kecases}, its
 diagonal entry is $4\cdot\tfrac46=\tfrac83$, an edge-neighbour entry is
 $2\cdot(-\tfrac16)=-\tfrac13$, and a diagonal-neighbour entry is
-$1\cdot(-\tfrac26)=-\tfrac13$.  The equation of node $(i,j)$ is therefore
+$1\cdot(-\tfrac26)=-\tfrac13$; Figure~\ref{fig:assembly} carries out this
+addition element by element.  The equation of node $(i,j)$ is therefore
 \begin{equation}\label{eq:row}
   \boxed{\;\frac13\Bigl[\,8\,U_{i,j}-\sum_{(k,l)\in\mathcal{N}_{ij}}U_{k,l}\Bigr]=b_{ij},
   \qquad 1\le i,j\le N-1,\;}
@@ -856,6 +945,8 @@ $g=1$, as in part (d),
 \end{equation}
 Finally, $\bm{A}$ is symmetric positive definite by Lecture 13's argument,
 since (S) and (VE) of 4(b) hold whatever the element shape.
+Figure~\ref{fig:assembly3} assembles \eqref{eq:system} and \eqref{eq:r}
+square by square for $N=3$.
 
 \medskip
 {\small\color{black!60}\textbf{Same as finite differences?}  Divide
@@ -865,6 +956,448 @@ nine-point difference formula for $-\lap u$.  This is Lecture 4's ``CG(1) with
 trapezoidal load is the central difference method'', one dimension up: the 2D
 element couples diagonal neighbours too, which the five-point formula does
 not.}
+
+% ------------------------------------------------------------------
+% Assembly of one row of A, element by element (Figure fig:assembly)
+% generated layout; colours elone..elfour are defined in the preamble
+\newpage
+\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,
+  left=5pt,right=5pt,top=2pt,bottom=1pt,colbacktitle=black!7,coltitle=black,
+  title={\small\bfseries Assembly of row $(i,j)$ of $\bm A$\hfill
+         \mdseries\src{Lecture 4, eq.~(1.56); Lecture 13, eq.~(1.236) and the array \texttt{t}}}]
+\scriptsize
+\begin{minipage}[c]{0.43\linewidth}\centering
+\begin{tikzpicture}[x=1.6cm,y=1.6cm,font=\scriptsize]
+  \fill[elone!14]   (1,1) rectangle (2,2);
+  \fill[eltwo!14]   (0,1) rectangle (1,2);
+  \fill[elthree!14] (0,0) rectangle (1,1);
+  \fill[elfour!14]  (1,0) rectangle (2,1);
+  \foreach \t in {0,1,2}{\draw[gray!70] (\t,0) -- (\t,2); \draw[gray!70] (0,\t) -- (2,\t);}
+  \foreach \a/\b/\n/\c/\name in {1/1/1/elone/{\Om_{ij}},0/1/2/eltwo/{\Om_{i-1,j}},
+                                0/0/3/elthree/{\Om_{i-1,j-1}},1/0/4/elfour/{\Om_{i,j-1}}}{
+    \node[circle,draw=\c,text=\c,inner sep=0.7pt,font=\scriptsize\bfseries] at (\a+0.5,\b+0.62) {\n};
+    \node[text=\c] at (\a+0.5,\b+0.38) {$\name$};
+    \node[text=\c,font=\tiny] at (\a+0.2,\b+0.2) {1};
+    \node[text=\c,font=\tiny] at (\a+0.8,\b+0.2) {2};
+    \node[text=\c,font=\tiny] at (\a+0.8,\b+0.8) {3};
+    \node[text=\c,font=\tiny] at (\a+0.2,\b+0.8) {4};}
+  \foreach \x in {0,1,2}{\foreach \y in {0,1,2}{\fill (\x,\y) circle (1.2pt);}}
+  \node[below left]  at (0,0) {$(i{-}1,j{-}1)$};
+  \node[below]       at (1,0) {$(i,j{-}1)$};
+  \node[below right] at (2,0) {$(i{+}1,j{-}1)$};
+  \node[left]        at (0,1) {$(i{-}1,j)$};
+  \node[right]       at (2,1) {$(i{+}1,j)$};
+  \node[above left]  at (0,2) {$(i{-}1,j{+}1)$};
+  \node[above]       at (1,2) {$(i,j{+}1)$};
+  \node[above right] at (2,2) {$(i{+}1,j{+}1)$};
+  \node[fill=white,draw=black,rounded corners=1pt,inner sep=0.6pt,font=\tiny] at (1,1) {$\bm{(i,j)}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+\textbf{(a) The four squares around node $(i,j)$} (the right panel of
+Figure~\ref{fig:element}).  The squares are numbered \en{1}{elone}--\en{4}{elfour}
+counter-clockwise from $\Om_{ij}$.  Each square numbers its own corners $1$--$4$
+(small numbers) counter-clockwise from its bottom-left corner, as in
+\eqref{eq:hatsQ}, so node $(i,j)$ is corner $1$ of \en{1}{elone}, corner $2$ of
+\en{2}{eltwo}, corner $3$ of \en{3}{elthree} and corner $4$ of \en{4}{elfour}.
+The list of global nodes at corners $1$--$4$ of a square is its row of Lecture
+13's connectivity array \texttt{t}.
+
+\smallskip
+\textbf{(b) The element matrix of each square} (below).  All four squares have
+the same size and shape, so all four carry the same numbers, $\bm k^{e}$ of
+\eqref{eq:ke}; only the names of the rows and columns differ.  Grey: local
+corner numbers; under them, the global node at that corner.  Shaded: the row of
+node $(i,j)$, the only row that enters row $(i,j)$ of $\bm A$.
+\end{minipage}
+
+\vspace{2pt}
+\renewcommand{\arraystretch}{1.0}
+\setlength{\tabcolsep}{4pt}
+\begin{center}
+\begin{tabular}{@{}c@{\hspace{3pt}}r|rrrr@{}}
+\multicolumn{6}{@{}l}{\en{2}{eltwo}\ \textcolor{eltwo}{$\Om_{i-1,j}$}:\ \ $\bm k^{(2)}=\tfrac16\,\times$}\\[1pt]
+ & & {\color{gray}1} & {\color{gray}2} & {\color{gray}3} & {\color{gray}4}\\
+ & & $(i{-}1,j)$ & $(i,j)$ & $(i,j{+}1)$ & $(i{-}1,j{+}1)$\\\hline
+{\color{gray}1} & $(i{-}1,j)$ & $4$ & $-1$ & $-2$ & $-1$\\
+\rowcolor{eltwo!16}{\color{gray}2} & $(i,j)$ & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}3} & $(i,j{+}1)$ & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}4} & $(i{-}1,j{+}1)$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}\hfill
+\begin{tabular}{@{}c@{\hspace{3pt}}r|rrrr@{}}
+\multicolumn{6}{@{}l}{\en{1}{elone}\ \textcolor{elone}{$\Om_{ij}$}:\ \ $\bm k^{(1)}=\tfrac16\,\times$}\\[1pt]
+ & & {\color{gray}1} & {\color{gray}2} & {\color{gray}3} & {\color{gray}4}\\
+ & & $(i,j)$ & $(i{+}1,j)$ & $(i{+}1,j{+}1)$ & $(i,j{+}1)$\\\hline
+\rowcolor{elone!16}{\color{gray}1} & $(i,j)$ & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}2} & $(i{+}1,j)$ & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}3} & $(i{+}1,j{+}1)$ & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}4} & $(i,j{+}1)$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}\\[3pt]
+\begin{tabular}{@{}c@{\hspace{3pt}}r|rrrr@{}}
+\multicolumn{6}{@{}l}{\en{3}{elthree}\ \textcolor{elthree}{$\Om_{i-1,j-1}$}:\ \ $\bm k^{(3)}=\tfrac16\,\times$}\\[1pt]
+ & & {\color{gray}1} & {\color{gray}2} & {\color{gray}3} & {\color{gray}4}\\
+ & & $(i{-}1,j{-}1)$ & $(i,j{-}1)$ & $(i,j)$ & $(i{-}1,j)$\\\hline
+{\color{gray}1} & $(i{-}1,j{-}1)$ & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}2} & $(i,j{-}1)$ & $-1$ & $4$ & $-1$ & $-2$\\
+\rowcolor{elthree!16}{\color{gray}3} & $(i,j)$ & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}4} & $(i{-}1,j)$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}\hfill
+\begin{tabular}{@{}c@{\hspace{3pt}}r|rrrr@{}}
+\multicolumn{6}{@{}l}{\en{4}{elfour}\ \textcolor{elfour}{$\Om_{i,j-1}$}:\ \ $\bm k^{(4)}=\tfrac16\,\times$}\\[1pt]
+ & & {\color{gray}1} & {\color{gray}2} & {\color{gray}3} & {\color{gray}4}\\
+ & & $(i,j{-}1)$ & $(i{+}1,j{-}1)$ & $(i{+}1,j)$ & $(i,j)$\\\hline
+{\color{gray}1} & $(i,j{-}1)$ & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}2} & $(i{+}1,j{-}1)$ & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}3} & $(i{+}1,j)$ & $-2$ & $-1$ & $4$ & $-1$\\
+\rowcolor{elfour!16}{\color{gray}4} & $(i,j)$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+\end{center}
+
+\vspace{-2pt}
+\textbf{(c) Adding the shaded rows.}  $A_{(i,j),(k,l)}=\Iint\grad\varphi_{kl}\cdot\grad\varphi_{ij}\dxdy$
+is the sum of the integrals over the squares, so each shaded row goes into the
+columns of its global nodes ($\cdot$: the square does not contain that node),
+and each column adds what it received.
+
+\smallskip
+\begin{center}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccccccccc@{}}\toprule
+column of $\bm A$ & $(i{-}1,j{-}1)$ & $(i,j{-}1)$ & $(i{+}1,j{-}1)$ & $(i{-}1,j)$ & $(i,j)$ & $(i{+}1,j)$ & $(i{-}1,j{+}1)$ & $(i,j{+}1)$ & $(i{+}1,j{+}1)$\\
+{\color{gray}squares sharing both} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{gray}2} & {\color{gray}4} & {\color{gray}2} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1}\\\midrule
+\en{1}{elone}\ shaded row of $\bm k^{(1)}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & \textcolor{elone}{$4$} & \textcolor{elone}{$-1$} & {\color{gray!60}$\cdot$} & \textcolor{elone}{$-1$} & \textcolor{elone}{$-2$}\\
+\en{2}{eltwo}\ shaded row of $\bm k^{(2)}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & \textcolor{eltwo}{$-1$} & \textcolor{eltwo}{$4$} & {\color{gray!60}$\cdot$} & \textcolor{eltwo}{$-2$} & \textcolor{eltwo}{$-1$} & {\color{gray!60}$\cdot$}\\
+\en{3}{elthree}\ shaded row of $\bm k^{(3)}$ & \textcolor{elthree}{$-2$} & \textcolor{elthree}{$-1$} & {\color{gray!60}$\cdot$} & \textcolor{elthree}{$-1$} & \textcolor{elthree}{$4$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$}\\
+\en{4}{elfour}\ shaded row of $\bm k^{(4)}$ & {\color{gray!60}$\cdot$} & \textcolor{elfour}{$-1$} & \textcolor{elfour}{$-2$} & {\color{gray!60}$\cdot$} & \textcolor{elfour}{$4$} & \textcolor{elfour}{$-1$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$}\\
+\midrule column sum & $\bm{-2}$ & $\bm{-2}$ & $\bm{-2}$ & $\bm{-2}$ & $\bm{16}$ & $\bm{-2}$ & $\bm{-2}$ & $\bm{-2}$ & $\bm{-2}$\\
+$\times\tfrac16$ $=$ entry of $\bm A$ & $-\tfrac13$ & $-\tfrac13$ & $-\tfrac13$ & $-\tfrac13$ & {\boldmath$\tfrac83$} & $-\tfrac13$ & $-\tfrac13$ & $-\tfrac13$ & $-\tfrac13$\\\bottomrule
+\end{tabular}
+\end{center}
+\vspace{-2pt}
+An edge neighbour collects two $-1$'s (two squares share the edge), a diagonal
+neighbour one $-2$ (one shared square), and the node itself four $4$'s.
+
+\smallskip
+\textbf{(d) The same addition in 1D: Lecture 4's bar.}  Two elements of
+length $h$, both with $\bm k^{(1)}=\bm k^{(2)}=\tfrac1h\left[\begin{smallmatrix}1&-1\\-1&\phantom{-}1\end{smallmatrix}\right]$
+(Lecture 4, eq.~(1.56), with $EA=1$).
+
+\smallskip
+\begin{minipage}[c]{0.49\linewidth}\centering
+\begin{tikzpicture}[font=\scriptsize]
+  \draw[line width=2.2pt,elone] (0,0) -- (2.6,0);
+  \draw[line width=2.2pt,eltwo] (2.6,0) -- (5.2,0);
+  \foreach \x/\l in {0/j{-}1,2.6/j,5.2/j{+}1}{\fill (\x,0) circle (1.8pt); \node[below=1pt] at (\x,0) {$\l$};}
+  \node[above=2pt] at (1.3,0) {\en{1}{elone}};
+  \node[above=2pt] at (3.9,0) {\en{2}{eltwo}};
+\end{tikzpicture}
+
+\smallskip
+\begin{tabular}{@{}lccc@{}}\toprule
+column of $\bm A$ & $j{-}1$ & $j$ & $j{+}1$\\\midrule
+\en{1}{elone}\ row of $j$ (its corner $2$) & \textcolor{elone}{$-1$} & \textcolor{elone}{$1$} & {\color{gray!60}$\cdot$}\\
+\en{2}{eltwo}\ row of $j$ (its corner $1$) & {\color{gray!60}$\cdot$} & \textcolor{eltwo}{$1$} & \textcolor{eltwo}{$-1$}\\\midrule
+column sum $\times\tfrac1h$ $=$ entry of $\bm A$ & $-\tfrac1h$ & {\boldmath$\tfrac2h$} & $-\tfrac1h$\\\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\begin{tabular}{@{}lll@{}}\toprule
+ & 1D bar & 2D square\\\midrule
+elements at the node & $2$ & $4$\\
+diagonal & $2\times\tfrac1h$ & $4\times\tfrac46=\tfrac83$\\
+neighbour in $2$ elements & --- & edge: $2\times(-\tfrac16)$\\
+neighbour in $1$ element & $1\times(-\tfrac1h)$ & diagonal: $1\times(-\tfrac26)$\\
+row sum & $0$ & $0$\\\bottomrule
+\end{tabular}
+
+\smallskip
+\textbf{Mechanics.}  Each element acts as a spring between its nodes.  Every
+element touching a node adds to that node's diagonal, and elements joining the
+same two nodes act in parallel, so their stiffnesses add.  The bar's node $j$
+hangs on two springs; the membrane's node $(i,j)$ on four squares.
+\end{minipage}
+
+\captionsetup{font=scriptsize,skip=3pt}
+\captionof{figure}{Assembly of row $(i,j)$ of $\bm A$, \eqr{eq:row}, from
+the four element matrices, and the same addition for Lecture~4's bar.}
+\label{fig:assembly}
+\end{tcolorbox}
+% ------------------------------------------------------------------
+% Assembly on a 3x3 patch (Figure fig:assembly3), generated layout;
+% colours elone..elnine are defined in the preamble
+\newpage
+\begin{tcolorbox}[colback=white,colframe=black!55,boxrule=0.6pt,arc=2pt,
+  left=5pt,right=5pt,top=2pt,bottom=1pt,colbacktitle=black!7,coltitle=black,
+  title={\small\bfseries Assembly on a $3\times3$ patch\hfill
+         \mdseries\src{Lecture 4, eq.~(1.56); Lecture 13, eq.~(1.236) and the array \texttt{t}}}]
+\scriptsize
+\textbf{(a) The patch.}  Figure~\ref{fig:assembly} with one more column ($i{+}2$)
+and one more row ($j{+}2$); node $(i,j)$ is where it was, and squares
+\en{1}{elone}--\en{4}{elfour} keep their numbers.  The new squares
+\en{5}{elfive}--\en{9}{elnine} continue counter-clockwise.  Each node carries a
+global number, as in \texttt{assemble.py}: the four inner nodes come first,
+row by row ($\bm1=(i,j)$, $\bm2=(i{+}1,j)$, $\bm3=(i,j{+}1)$,
+$\bm4=(i{+}1,j{+}1)$), then the outer ring $5$--$16$, counter-clockwise from
+$(i{-}1,j{-}1)$.  Every square around an inner node lies in the patch, so the
+rows of $\bm1$--$\bm4$ are complete.
+
+\textbf{(b) The element matrix of each square}, placed where the square sits.
+All nine carry the numbers of $\bm k^{e}$ in \eqref{eq:ke} (times $\tfrac16$),
+with rows and columns in the order of corners $1$--$4$; the labels are the
+global numbers at those corners, i.e.\ the square's row of \texttt{t}.
+Shaded: rows of inner nodes, the ones assembled into $\bm A$.  A square
+contributes one shaded row per inner node it touches: \en{1}{elone} four,
+\en{2}{eltwo}\,\en{4}{elfour}\,\en{6}{elsix}\,\en{8}{eleight} two, and
+\en{3}{elthree}\,\en{5}{elfive}\,\en{7}{elseven}\,\en{9}{elnine} one.
+
+\smallskip
+\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1.45cm,y=1.45cm,font=\scriptsize]
+  \fill[elone!14] (1,1) rectangle (2,2);
+  \fill[eltwo!14] (0,1) rectangle (1,2);
+  \fill[elthree!14] (0,0) rectangle (1,1);
+  \fill[elfour!14] (1,0) rectangle (2,1);
+  \fill[elfive!14] (2,0) rectangle (3,1);
+  \fill[elsix!14] (2,1) rectangle (3,2);
+  \fill[elseven!14] (2,2) rectangle (3,3);
+  \fill[eleight!14] (1,2) rectangle (2,3);
+  \fill[elnine!14] (0,2) rectangle (1,3);
+  \foreach \t in {0,1,2,3}{\draw[gray!70] (\t,0) -- (\t,3); \draw[gray!70] (0,\t) -- (3,\t);}
+  \node[circle,draw=elone,text=elone,inner sep=0.6pt,font=\scriptsize\bfseries] at (1.5,1.6) {1};
+  \node[text=elone,font=\tiny] at (1.5,1.36) {$\Om_{ij}$};
+  \node[text=elone,font=\tiny] at (1.17,1.17) {1};
+  \node[text=elone,font=\tiny] at (1.83,1.17) {2};
+  \node[text=elone,font=\tiny] at (1.83,1.83) {3};
+  \node[text=elone,font=\tiny] at (1.17,1.83) {4};
+  \node[circle,draw=eltwo,text=eltwo,inner sep=0.6pt,font=\scriptsize\bfseries] at (0.5,1.6) {2};
+  \node[text=eltwo,font=\tiny] at (0.5,1.36) {$\Om_{i-1,j}$};
+  \node[text=eltwo,font=\tiny] at (0.17,1.17) {1};
+  \node[text=eltwo,font=\tiny] at (0.83,1.17) {2};
+  \node[text=eltwo,font=\tiny] at (0.83,1.83) {3};
+  \node[text=eltwo,font=\tiny] at (0.17,1.83) {4};
+  \node[circle,draw=elthree,text=elthree,inner sep=0.6pt,font=\scriptsize\bfseries] at (0.5,0.6) {3};
+  \node[text=elthree,font=\tiny] at (0.5,0.36) {$\Om_{i-1,j-1}$};
+  \node[text=elthree,font=\tiny] at (0.17,0.17) {1};
+  \node[text=elthree,font=\tiny] at (0.83,0.17) {2};
+  \node[text=elthree,font=\tiny] at (0.83,0.83) {3};
+  \node[text=elthree,font=\tiny] at (0.17,0.83) {4};
+  \node[circle,draw=elfour,text=elfour,inner sep=0.6pt,font=\scriptsize\bfseries] at (1.5,0.6) {4};
+  \node[text=elfour,font=\tiny] at (1.5,0.36) {$\Om_{i,j-1}$};
+  \node[text=elfour,font=\tiny] at (1.17,0.17) {1};
+  \node[text=elfour,font=\tiny] at (1.83,0.17) {2};
+  \node[text=elfour,font=\tiny] at (1.83,0.83) {3};
+  \node[text=elfour,font=\tiny] at (1.17,0.83) {4};
+  \node[circle,draw=elfive,text=elfive,inner sep=0.6pt,font=\scriptsize\bfseries] at (2.5,0.6) {5};
+  \node[text=elfive,font=\tiny] at (2.5,0.36) {$\Om_{i+1,j-1}$};
+  \node[text=elfive,font=\tiny] at (2.17,0.17) {1};
+  \node[text=elfive,font=\tiny] at (2.83,0.17) {2};
+  \node[text=elfive,font=\tiny] at (2.83,0.83) {3};
+  \node[text=elfive,font=\tiny] at (2.17,0.83) {4};
+  \node[circle,draw=elsix,text=elsix,inner sep=0.6pt,font=\scriptsize\bfseries] at (2.5,1.6) {6};
+  \node[text=elsix,font=\tiny] at (2.5,1.36) {$\Om_{i+1,j}$};
+  \node[text=elsix,font=\tiny] at (2.17,1.17) {1};
+  \node[text=elsix,font=\tiny] at (2.83,1.17) {2};
+  \node[text=elsix,font=\tiny] at (2.83,1.83) {3};
+  \node[text=elsix,font=\tiny] at (2.17,1.83) {4};
+  \node[circle,draw=elseven,text=elseven,inner sep=0.6pt,font=\scriptsize\bfseries] at (2.5,2.6) {7};
+  \node[text=elseven,font=\tiny] at (2.5,2.36) {$\Om_{i+1,j+1}$};
+  \node[text=elseven,font=\tiny] at (2.17,2.17) {1};
+  \node[text=elseven,font=\tiny] at (2.83,2.17) {2};
+  \node[text=elseven,font=\tiny] at (2.83,2.83) {3};
+  \node[text=elseven,font=\tiny] at (2.17,2.83) {4};
+  \node[circle,draw=eleight,text=eleight,inner sep=0.6pt,font=\scriptsize\bfseries] at (1.5,2.6) {8};
+  \node[text=eleight,font=\tiny] at (1.5,2.36) {$\Om_{i,j+1}$};
+  \node[text=eleight,font=\tiny] at (1.17,2.17) {1};
+  \node[text=eleight,font=\tiny] at (1.83,2.17) {2};
+  \node[text=eleight,font=\tiny] at (1.83,2.83) {3};
+  \node[text=eleight,font=\tiny] at (1.17,2.83) {4};
+  \node[circle,draw=elnine,text=elnine,inner sep=0.6pt,font=\scriptsize\bfseries] at (0.5,2.6) {9};
+  \node[text=elnine,font=\tiny] at (0.5,2.36) {$\Om_{i-1,j+1}$};
+  \node[text=elnine,font=\tiny] at (0.17,2.17) {1};
+  \node[text=elnine,font=\tiny] at (0.83,2.17) {2};
+  \node[text=elnine,font=\tiny] at (0.83,2.83) {3};
+  \node[text=elnine,font=\tiny] at (0.17,2.83) {4};
+  \node[fill=white,draw=black,rounded corners=1pt,inner sep=0.8pt,font=\tiny\bfseries] at (1,1) {1};
+  \node[fill=white,draw=black,rounded corners=1pt,inner sep=0.8pt,font=\tiny\bfseries] at (2,1) {2};
+  \node[fill=white,draw=black,rounded corners=1pt,inner sep=0.8pt,font=\tiny\bfseries] at (1,2) {3};
+  \node[fill=white,draw=black,rounded corners=1pt,inner sep=0.8pt,font=\tiny\bfseries] at (2,2) {4};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (0,0) {5};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (1,0) {6};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (2,0) {7};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (3,0) {8};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (3,1) {9};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (3,2) {10};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (3,3) {11};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (2,3) {12};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (1,3) {13};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (0,3) {14};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (0,2) {15};
+  \node[fill=white,draw=gray,rounded corners=1pt,inner sep=0.8pt,font=\tiny,text=gray] at (0,1) {16};
+  \node[below=5pt] at (0,0) {$i{-}1$};
+  \node[below=5pt] at (1,0) {$i$};
+  \node[below=5pt] at (2,0) {$i{+}1$};
+  \node[below=5pt] at (3,0) {$i{+}2$};
+  \node[left=5pt] at (0,0) {$j{-}1$};
+  \node[left=5pt] at (0,1) {$j$};
+  \node[left=5pt] at (0,2) {$j{+}1$};
+  \node[left=5pt] at (0,3) {$j{+}2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\centering
+\renewcommand{\arraystretch}{0.95}
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{@{}c@{\hspace{7pt}}c@{\hspace{7pt}}c@{}}
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{9}{elnine}\,\textcolor{elnine}{$\Om_{i-1,j+1}$}}\\
+ & {\color{gray}$15$} & $\bm{3}$ & {\color{gray}$13$} & {\color{gray}$14$}\\\hline
+{\color{gray}$15$} & $4$ & $-1$ & $-2$ & $-1$\\
+\rowcolor{elnine!16}$\bm{3}$ & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}$13$} & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}$14$} & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{8}{eleight}\,\textcolor{eleight}{$\Om_{i,j+1}$}}\\
+ & $\bm{3}$ & $\bm{4}$ & {\color{gray}$12$} & {\color{gray}$13$}\\\hline
+\rowcolor{eleight!16}$\bm{3}$ & $4$ & $-1$ & $-2$ & $-1$\\
+\rowcolor{eleight!16}$\bm{4}$ & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}$12$} & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}$13$} & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{7}{elseven}\,\textcolor{elseven}{$\Om_{i+1,j+1}$}}\\
+ & $\bm{4}$ & {\color{gray}$10$} & {\color{gray}$11$} & {\color{gray}$12$}\\\hline
+\rowcolor{elseven!16}$\bm{4}$ & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}$10$} & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}$11$} & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}$12$} & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}\\[3pt]
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{2}{eltwo}\,\textcolor{eltwo}{$\Om_{i-1,j}$}}\\
+ & {\color{gray}$16$} & $\bm{1}$ & $\bm{3}$ & {\color{gray}$15$}\\\hline
+{\color{gray}$16$} & $4$ & $-1$ & $-2$ & $-1$\\
+\rowcolor{eltwo!16}$\bm{1}$ & $-1$ & $4$ & $-1$ & $-2$\\
+\rowcolor{eltwo!16}$\bm{3}$ & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}$15$} & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{1}{elone}\,\textcolor{elone}{$\Om_{ij}$}}\\
+ & $\bm{1}$ & $\bm{2}$ & $\bm{4}$ & $\bm{3}$\\\hline
+\rowcolor{elone!16}$\bm{1}$ & $4$ & $-1$ & $-2$ & $-1$\\
+\rowcolor{elone!16}$\bm{2}$ & $-1$ & $4$ & $-1$ & $-2$\\
+\rowcolor{elone!16}$\bm{4}$ & $-2$ & $-1$ & $4$ & $-1$\\
+\rowcolor{elone!16}$\bm{3}$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{6}{elsix}\,\textcolor{elsix}{$\Om_{i+1,j}$}}\\
+ & $\bm{2}$ & {\color{gray}$9$} & {\color{gray}$10$} & $\bm{4}$\\\hline
+\rowcolor{elsix!16}$\bm{2}$ & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}$9$} & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}$10$} & $-2$ & $-1$ & $4$ & $-1$\\
+\rowcolor{elsix!16}$\bm{4}$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}\\[3pt]
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{3}{elthree}\,\textcolor{elthree}{$\Om_{i-1,j-1}$}}\\
+ & {\color{gray}$5$} & {\color{gray}$6$} & $\bm{1}$ & {\color{gray}$16$}\\\hline
+{\color{gray}$5$} & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}$6$} & $-1$ & $4$ & $-1$ & $-2$\\
+\rowcolor{elthree!16}$\bm{1}$ & $-2$ & $-1$ & $4$ & $-1$\\
+{\color{gray}$16$} & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{4}{elfour}\,\textcolor{elfour}{$\Om_{i,j-1}$}}\\
+ & {\color{gray}$6$} & {\color{gray}$7$} & $\bm{2}$ & $\bm{1}$\\\hline
+{\color{gray}$6$} & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}$7$} & $-1$ & $4$ & $-1$ & $-2$\\
+\rowcolor{elfour!16}$\bm{2}$ & $-2$ & $-1$ & $4$ & $-1$\\
+\rowcolor{elfour!16}$\bm{1}$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+&
+\begin{tabular}{@{}r|rrrr@{}}
+\multicolumn{5}{@{}l@{}}{\en{5}{elfive}\,\textcolor{elfive}{$\Om_{i+1,j-1}$}}\\
+ & {\color{gray}$7$} & {\color{gray}$8$} & {\color{gray}$9$} & $\bm{2}$\\\hline
+{\color{gray}$7$} & $4$ & $-1$ & $-2$ & $-1$\\
+{\color{gray}$8$} & $-1$ & $4$ & $-1$ & $-2$\\
+{\color{gray}$9$} & $-2$ & $-1$ & $4$ & $-1$\\
+\rowcolor{elfive!16}$\bm{2}$ & $-1$ & $-2$ & $-1$ & $4$\\
+\end{tabular}
+\end{tabular}
+\end{minipage}
+
+\smallskip
+\textbf{(c) Adding the shaded rows.}  Each shaded row is placed in row
+$\bm p$ of $\bm A$ (its inner node) and in the columns of its global nodes; each
+cell lists the contributions in the colour of the square they come from
+($\cdot$: no square contains both nodes).
+
+\smallskip
+\begin{center}
+\setlength{\tabcolsep}{1.45pt}
+\begin{tabular}{@{}l|cccc|cccccccccccc@{}}\toprule
+row$\,\backslash\,$node & $\bm{1}$ & $\bm{2}$ & $\bm{3}$ & $\bm{4}$ & {\color{gray}$5$} & {\color{gray}$6$} & {\color{gray}$7$} & {\color{gray}$8$} & {\color{gray}$9$} & {\color{gray}$10$} & {\color{gray}$11$} & {\color{gray}$12$} & {\color{gray}$13$} & {\color{gray}$14$} & {\color{gray}$15$} & {\color{gray}$16$}\\\midrule
+$\bm{1}$ & ${\color{elone}4}{\color{eltwo}{+}4}{\color{elthree}{+}4}{\color{elfour}{+}4}$ & ${\color{elone}-1}{\color{elfour}{-}1}$ & ${\color{elone}-1}{\color{eltwo}{-}1}$ & ${\color{elone}-2}$ & ${\color{elthree}-2}$ & ${\color{elthree}-1}{\color{elfour}{-}1}$ & ${\color{elfour}-2}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & ${\color{eltwo}-2}$ & ${\color{eltwo}-1}{\color{elthree}{-}1}$\\
+$\bm{2}$ & ${\color{elone}-1}{\color{elfour}{-}1}$ & ${\color{elone}4}{\color{elfour}{+}4}{\color{elfive}{+}4}{\color{elsix}{+}4}$ & ${\color{elone}-2}$ & ${\color{elone}-1}{\color{elsix}{-}1}$ & {\color{gray!60}$\cdot$} & ${\color{elfour}-2}$ & ${\color{elfour}-1}{\color{elfive}{-}1}$ & ${\color{elfive}-2}$ & ${\color{elfive}-1}{\color{elsix}{-}1}$ & ${\color{elsix}-2}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$}\\
+$\bm{3}$ & ${\color{elone}-1}{\color{eltwo}{-}1}$ & ${\color{elone}-2}$ & ${\color{elone}4}{\color{eltwo}{+}4}{\color{eleight}{+}4}{\color{elnine}{+}4}$ & ${\color{elone}-1}{\color{eleight}{-}1}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & ${\color{eleight}-2}$ & ${\color{eleight}-1}{\color{elnine}{-}1}$ & ${\color{elnine}-2}$ & ${\color{eltwo}-1}{\color{elnine}{-}1}$ & ${\color{eltwo}-2}$\\
+$\bm{4}$ & ${\color{elone}-2}$ & ${\color{elone}-1}{\color{elsix}{-}1}$ & ${\color{elone}-1}{\color{eleight}{-}1}$ & ${\color{elone}4}{\color{elsix}{+}4}{\color{elseven}{+}4}{\color{eleight}{+}4}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & ${\color{elsix}-2}$ & ${\color{elsix}-1}{\color{elseven}{-}1}$ & ${\color{elseven}-2}$ & ${\color{elseven}-1}{\color{eleight}{-}1}$ & ${\color{eleight}-2}$ & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$} & {\color{gray!60}$\cdot$}\\
+\bottomrule\end{tabular}
+\end{center}
+\vspace{-2pt}
+Times $\tfrac16$, every diagonal cell gives $\tfrac{16}{6}=\tfrac83$ and every
+other filled cell $-\tfrac26=-\tfrac13$; each row sums to $0$.  The inner
+columns $\bm1$--$\bm4$ form
+\[
+  \bm A=\frac13\begin{bmatrix}8&-1&-1&-1\\-1&8&-1&-1\\-1&-1&8&-1\\-1&-1&-1&8\end{bmatrix},
+\]
+and each row has five filled outer columns.  If the outer ring is $\dOm$ (the
+grid $N=3$, $i=j=1$), those values $U=g$ move to the right-hand side as
+$r=\tfrac13\sum g=\tfrac53$ for $g=1$: this is \eqref{eq:system} with
+$\bm T=\left[\begin{smallmatrix}8&-1\\-1&8\end{smallmatrix}\right]$,
+$\bm S=\left[\begin{smallmatrix}-1&-1\\-1&-1\end{smallmatrix}\right]$, and
+\eqref{eq:r} for a node next to a corner.
+
+\smallskip
+\textbf{(d) The same in 1D: Lecture 4's bar with one more element.}  Node $j$
+stays where it was; element \en{3}{elthree} is added on the right.  All three
+have $\bm k^{e}=\tfrac1h\left[\begin{smallmatrix}1&-1\\-1&\phantom{-}1\end{smallmatrix}\right]$.
+
+\smallskip
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[font=\scriptsize]
+  \draw[line width=2.2pt,elone] (0,0) -- (1.9,0);
+  \draw[line width=2.2pt,eltwo] (1.9,0) -- (3.8,0);
+  \draw[line width=2.2pt,elthree] (3.8,0) -- (5.7,0);
+  \foreach \x/\l in {0/j{-}1,1.9/j,3.8/j{+}1,5.7/j{+}2}{\fill (\x,0) circle (1.8pt); \node[below=1pt] at (\x,0) {$\l$};}
+  \node[above=2pt] at (0.95,0) {\en{1}{elone}};
+  \node[above=2pt] at (2.85,0) {\en{2}{eltwo}};
+  \node[above=2pt] at (4.75,0) {\en{3}{elthree}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{tabular}{@{}l|cc|cc@{}}\toprule
+row $\backslash$ node & $j$ & $j{+}1$ & $j{-}1$ & $j{+}2$\\\midrule
+$j$     & ${\color{elone}1}{\color{eltwo}{+}1}$ & {\color{eltwo}$-1$} & {\color{elone}$-1$} & {\color{gray!60}$\cdot$}\\
+$j{+}1$ & {\color{eltwo}$-1$} & ${\color{eltwo}1}{\color{elthree}{+}1}$ & {\color{gray!60}$\cdot$} & {\color{elthree}$-1$}\\\midrule
+$\times\tfrac1h$ & \multicolumn{2}{c|}{$\tfrac1h\left[\begin{smallmatrix}2&-1\\-1&2\end{smallmatrix}\right]$} & \multicolumn{2}{c}{to the right-hand side}\\\bottomrule
+\end{tabular}
+\end{minipage}
+
+\smallskip
+The inner block is Lecture 4's matrix, eq.~(1.56), with two unknowns.
+In both cases the rule is the same: a node's diagonal collects one term from
+every element around it (two in 1D, four in 2D), and a pair of nodes collects
+one term from every element that contains both.
+
+\captionsetup{font=scriptsize,skip=3pt}
+\captionof{figure}{Assembly on a $3\times3$ patch around node $(i,j)$: the
+nine element matrices add up to the complete rows of the four inner nodes,
+which for $N=3$ is the whole system \eqr{eq:system}.}
+\label{fig:assembly3}
+\end{tcolorbox}
+
 
 \newpage
 \problem{4(d)}{4d}
@@ -896,26 +1429,87 @@ and in $y$ gives
 This identity was also checked symbolically ($-\lap u-f\equiv0$).  On every
 side of the square $\sin(\pm\pi)=0$, so $s=0$ and $u=e^{0}=1=g$.
 
-\subsection*{Implementation \ \src{4(c); Lecture 5, eq.~(1.66)}}
+\subsection*{Implementation \ \src{4(c); Lecture 4: trapezoidal rule; Lecture 5, eq.~(1.66)}}
 
 The grids have $N\times N$ squares with $N=4,\dots,256$, so $h=2/N$ and there
 are $(N-1)^{2}$ unknowns.  The stiffness matrix is assembled from the element
-matrix $\bm k^{e}$ of 4(c), which is the same on every square.  The code
+matrix $\bm k^{e}$ of 4(c), \eqref{eq:ke}, which is the same on every square,
+as in Figures~\ref{fig:assembly} and~\ref{fig:assembly3}.  The code
 checks that every interior row is the stencil $\tfrac13[8;\,-1\times8]$ of
 4(c), that the interior matrix is symmetric positive definite, and that the
 boundary terms are $5/3$, $1$ and $0$ as in 4(c).  The boundary values
-$U=g=1$ are moved to the right-hand side, as in Lecture 5.
+$U=g=1$ are moved to the right-hand side, as in Lecture 5, so the code solves
+\eqref{eq:system} with $\bm r$ of \eqref{eq:r}.
 
-The load $b_{ij}=\iint f\varphi_{ij}$ is computed with $3\times3$ Gauss points
-per square rather than with the trapezoidal value $h^{2}f_{ij}$ of 4(c); the
-two are compared below.  The errors are computed with $4\times4$ Gauss points
-per square, in the norms of Lecture 13, eq.~(1.254):
+The load is the trapezoidal value $b_{ij}=h^{2}f_{ij}$ of 4(c),
+\eqref{eq:load}.  The errors are measured in the norms of Lecture 13,
+eq.~(1.254):
 \begin{equation}\label{eq:norms}
   \norm{e}_{L^{2}(\Om)}^{2}=\iint_{\Om}(u-U)^{2}\dxdy,
   \qquad
   \norm{e}_{V}^{2}=\norm{e}_{L^{2}(\Om)}^{2}+\iint_{\Om}\abs{\grad(u-U)}^{2}\dxdy .
 \end{equation}
-The observed rate is $\log_{2}\bigl(E(h)/E(h/2)\bigr)$, where $E$ is either
+These are integrals over the whole square, not nodal values.  The code
+evaluates them in the following form.
+
+\textbf{Trapezoidal rule on one square.}  Lecture 4's composite trapezoidal
+rule on $[x_{i},x_{i+1}]$ with $M$ sub-intervals of length $h/M$ uses the
+points $x_{i,a}=x_{i}+ah/M$, $a=0,\dots,M$, and the weights
+\begin{equation}\label{eq:wtrap}
+  w_{a}=\begin{cases}h/(2M), & a=0 \text{ or } a=M,\\ h/M, & 0<a<M.\end{cases}
+\end{equation}
+Applying it in $x$ and then in $y$ (points $y_{j,b}=y_{j}+bh/M$) gives, for any
+$F$,
+\begin{align}
+  \iint_{\Om_{ij}}F\dxdy
+  &=\int_{y_{j}}^{y_{j+1}}\Bigl(\int_{x_{i}}^{x_{i+1}}F\dx\Bigr)\mathrm{d}y
+   &&\text{iterated integral}\notag\\
+  &\approx\int_{y_{j}}^{y_{j+1}}\sum_{a=0}^{M}w_{a}F(x_{i,a},y)\,\mathrm{d}y
+   &&\text{trapezoidal rule in } x\notag\\
+  &\approx\sum_{a=0}^{M}\sum_{b=0}^{M}w_{a}w_{b}\,F(x_{i,a},y_{j,b})
+   &&\text{trapezoidal rule in } y .\label{eq:trap2d}
+\end{align}
+
+\textbf{The $L^{2}$ error.}  On $\Om_{ij}$, $U=\sum_{p=1}^{4}U_{p}\varphi_{p}$,
+where $U_{1},\dots,U_{4}$ are the values of $U$ at corners $1$--$4$ of
+$\Om_{ij}$ and $\varphi_{p}$ are the hat functions \eqref{eq:hatsQ}.  Then
+\begin{align}
+  \norm{e}_{L^{2}(\Om)}^{2}
+  &=\iint_{\Om}(u-U)^{2}\dxdy
+   &&\text{by \eqref{eq:norms}}\notag\\
+  &=\sum_{i,j=0}^{N-1}\iint_{\Om_{ij}}(u-U)^{2}\dxdy
+   &&\Om\text{ is the union of the squares}\notag\\
+  &=\sum_{i,j=0}^{N-1}\iint_{\Om_{ij}}\Bigl(u-\sum_{p=1}^{4}U_{p}\varphi_{p}\Bigr)^{2}\dxdy
+   &&U\text{ on }\Om_{ij}\notag\\
+  &\approx\sum_{i,j=0}^{N-1}\sum_{a,b=0}^{M}w_{a}w_{b}
+     \Bigl(u-\sum_{p=1}^{4}U_{p}\varphi_{p}\Bigr)^{2}\Big|_{(x_{i,a},\,y_{j,b})}
+   &&\text{by \eqref{eq:trap2d}} .\label{eq:eL2sum}
+\end{align}
+
+\textbf{The gradient part.}  With $\grad U=\sum_{p}U_{p}\grad\varphi_{p}$ and
+the gradients \eqref{eq:gradQ},
+\begin{align}
+  \iint_{\Om}\abs{\grad(u-U)}^{2}\dxdy
+  &=\sum_{i,j=0}^{N-1}\iint_{\Om_{ij}}\Bigl[\Bigl(\frac{\partial u}{\partial x}-\frac{\partial U}{\partial x}\Bigr)^{2}
+     +\Bigl(\frac{\partial u}{\partial y}-\frac{\partial U}{\partial y}\Bigr)^{2}\Bigr]\dxdy
+   &&\text{components of }\grad\notag\\
+  &\approx\sum_{i,j=0}^{N-1}\sum_{a,b=0}^{M}w_{a}w_{b}
+     \Bigl[\Bigl(\frac{\partial u}{\partial x}-\sum_{p=1}^{4}U_{p}\frac{\partial\varphi_{p}}{\partial x}\Bigr)^{2}
+   &&\text{by \eqref{eq:gradQ}, \eqref{eq:trap2d}}\notag\\
+  &\qquad\qquad+\Bigl(\frac{\partial u}{\partial y}-\sum_{p=1}^{4}U_{p}\frac{\partial\varphi_{p}}{\partial y}\Bigr)^{2}\Bigr]_{(x_{i,a},\,y_{j,b})} ,
+   \label{eq:eH1sum}
+\end{align}
+where $\partial u/\partial x=\pi\cos\pi x\sin\pi y\,e^{s}$ and
+$\partial u/\partial y=\pi\sin\pi x\cos\pi y\,e^{s}$ are the exact derivatives
+from the consistency check above.  Finally, $\norm{e}_{V}^{2}$ is the sum of
+\eqref{eq:eL2sum} and \eqref{eq:eH1sum}.
+
+Equations \eqref{eq:eL2sum} and \eqref{eq:eH1sum} with $M=16$ are exactly what
+\texttt{hw4\_p4d\_q1.py} computes; the code cites each equation it implements
+by its number here.  (With $M=1$ the rule would use the corners only, that is,
+nodal values only.)  Doubling the sub-grid from $M=8$ to $M=16$ changes the
+errors by less than $2.5\%$ and leaves the rates unchanged.  The
+observed rate is $\log_{2}\bigl(E(h)/E(h/2)\bigr)$, where $E$ is either
 error.
 
 \subsection*{Convergence table}
@@ -924,7 +1518,7 @@ error.
 \begin{minipage}{\linewidth}
 \centering\small
 \input{hw4_p4d_table}
-\captionof{table}{Bilinear squares on $[-1,1]^{2}$, $N\times N$ elements.}
+\captionof{table}{Bilinear squares on $[-1,1]^{2}$, $N\times N$ elements, trapezoidal load \eqr{eq:load}.}
 \label{tab:p4d}
 \end{minipage}
 \end{center}
@@ -945,11 +1539,9 @@ reference.}
 Table~\ref{tab:p4d} shows the rate in $\norm{e}_{V}$ tending to $1.00$, that
 is, $\norm{e}_{V}=\mathcal O(h)$, and the rate in $\norm{e}_{L^{2}(\Om)}$
 tending to $2.00$, that is, $\norm{e}_{L^{2}(\Om)}=\mathcal O(h^{2})$.  The
-rates are clean from $N=16$ on; at $N=4$ and $8$ the mesh has only two to four
-squares across each bump of $u$.  The trapezoidal load of 4(c) gives the same
-rates.  At $N=256$ it yields $\norm{e}_{V}=4.6355\times10^{-2}$ and
-$\norm{e}_{L^{2}}=9.7057\times10^{-5}$, against $4.6348\times10^{-2}$ and
-$9.5100\times10^{-5}$ with Gauss quadrature.
+rates are clean from $N=32$ on.  At $N=4$ and $8$ the mesh has only two to four
+squares across each bump of $u$, and the trapezoidal load samples $f$ at only
+$9$ and $49$ interior nodes.
 
 The first-order rate in $\norm{\cdot}_{V}$ follows from C\'ea's lemma.  The
 boundary terms of 4(c) reproduce $g=1$ exactly, so $U-1$ is the Galerkin
@@ -975,7 +1567,7 @@ rates.}
 \noindent\fbox{\parbox{0.955\linewidth}{%
 \textbf{Conclusion.}  Bilinear squares converge at $\mathcal O(h)$ in
 $\norm{\cdot}_{V}$ and $\mathcal O(h^{2})$ in $\norm{\cdot}_{L^{2}(\Om)}$ ---
-the same orders as CG(1) --- with $\norm{e}_{V}=4.63\times10^{-2}$ and
-$\norm{e}_{L^{2}}=9.51\times10^{-5}$ at $N=256$.}}
+the same orders as CG(1) --- with $\norm{e}_{V}=4.65\times10^{-2}$ and
+$\norm{e}_{L^{2}}=9.78\times10^{-5}$ at $N=256$.}}
 
 \end{document}
